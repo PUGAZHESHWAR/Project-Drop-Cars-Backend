@@ -1,18 +1,18 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.schemas.user import UserCreate, UserLogin
-from app.crud.user import create_user, authenticate_user
+from app.crud.vendor import create_user, authenticate_user
 from app.core.security import create_access_token
 from app.database.session import get_db
 
 router = APIRouter()
 
-@router.post("/signup")
+@router.post("/vendor/signup")
 def signup(user: UserCreate, db: Session = Depends(get_db)):
     db_user = create_user(db, user)
     return {"msg": "User created successfully", "user": db_user.id}
 
-@router.post("/login")
+@router.post("/vendor/login")
 def login(user: UserLogin, db: Session = Depends(get_db)):
     db_user = authenticate_user(db, user.username, user.password)
     if not db_user:
