@@ -14,8 +14,8 @@ def signup(user: UserCreate, db: Session = Depends(get_db)):
 
 @router.post("/vendor/login")
 def login(user: UserLogin, db: Session = Depends(get_db)):
-    db_user = authenticate_user(db, user.username, user.password)
+    db_user = authenticate_user(db, user.mobile_number, user.password)
     if not db_user:
         raise HTTPException(status_code=400, detail="Invalid credentials")
-    access_token = create_access_token({"sub": db_user.username})
+    access_token = create_access_token({"sub": str(db_user.id)})
     return {"access_token": access_token, "token_type": "bearer"}
