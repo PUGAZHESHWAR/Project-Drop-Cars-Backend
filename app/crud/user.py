@@ -5,7 +5,11 @@ from app.core.security import get_password_hash, verify_password
 
 def create_user(db: Session, user: UserCreate):
     hashed_password = get_password_hash(user.password)
-    db_user = User(username=user.username, email=user.email, hashed_password=hashed_password)
+    db_user = User(
+        full_name=user.full_name,
+        mobile_number=user.mobile_number,
+        hashed_password=hashed_password,
+    )
     db.add(db_user)
     db.commit()
     db.refresh(db_user)

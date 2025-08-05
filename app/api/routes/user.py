@@ -10,7 +10,7 @@ router = APIRouter()
 @router.post("/signup")
 def signup(user: UserCreate, db: Session = Depends(get_db)):
     db_user = create_user(db, user)
-    return {"msg": "User created successfully", "user": db_user.username}
+    return {"msg": "User created successfully", "user": db_user.id}
 
 @router.post("/login")
 def login(user: UserLogin, db: Session = Depends(get_db)):
