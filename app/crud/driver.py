@@ -2,6 +2,7 @@ from sqlalchemy.orm import Session
 from fastapi import HTTPException
 from app.models.driver import User
 from app.schemas.user import UserCreate
+from app.schemas.user import UserLogin
 from app.core.security import get_password_hash, verify_password
 
 def create_user(db: Session, user: UserCreate):
@@ -21,8 +22,8 @@ def create_user(db: Session, user: UserCreate):
     db.refresh(db_user)
     return db_user
 
-def authenticate_user(db: Session, mobile_number: str, password: str):
-    user = db.query(User).filter(User.mobile_number == mobile_number).first()
-    if not user or not verify_password(password, user.hashed_password):
+def authenticate_user(db: Session, users : UserLogin):
+    user = db.query(User).filter(User.mobile_number == users.mobile_number).first()
+    if not user or not verify_password(users.password, user.hashed_password):
         return None
     return user

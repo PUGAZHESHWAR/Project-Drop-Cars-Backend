@@ -1,10 +1,10 @@
 from pydantic import BaseModel
 from enum import Enum
 
-class AccountStatusEnum(str, Enum):
-    ACTIVE = "Active"
-    INACTIVE = "Inactive"
-    PENDING = "Pending"
+# class AccountStatusEnum(str, Enum):
+#     ACTIVE = "Active"
+#     INACTIVE = "Inactive"
+#     PENDING = "Pending"
 
 class UserCreate(BaseModel):
     full_name: str
