@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from app.api.routes import vendor,driver
+import app.models.admin
 from app.database.session import Base, engine
 
 # Create DB tables
