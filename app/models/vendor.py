@@ -10,9 +10,9 @@ class AccountStatusEnum(enum.Enum):
     PENDING = "Pending"
 
 class User(Base):
-    __tablename__ = "vendors"
+    __tablename__ = "vendor"
 
-    # id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, unique=True, index=True)
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, unique=True, index=True)
     full_name = Column(String, nullable=False)
     organization_id = Column(String, nullable=False)
     mobile_number = Column(String(10), unique=True, index=True, nullable=False)

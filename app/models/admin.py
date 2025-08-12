@@ -1,6 +1,6 @@
 # app/models/admin.py
 from sqlalchemy import Column, Integer, String, TIMESTAMP
-from database import Base
+from database.session import Base
 
 class Admin(Base):
     __tablename__ = "admin"
