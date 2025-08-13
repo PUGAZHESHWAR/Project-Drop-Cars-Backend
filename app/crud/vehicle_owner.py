@@ -1,25 +1,71 @@
 from sqlalchemy.orm import Session
 from fastapi import HTTPException, status
-from app.models.vehicle_owner import VehicleOwner
+from app.models.vehicle_owner import VehicleOwnerCredentials
+from app.models.vehicle_owner_details import VehicleOwnerDetails
 from app.schemas.vehicle_owner import VehicleOwnerBase
 from app.core.security import get_password_hash, verify_password
 from typing import Optional
 
-def create_user(db: Session, user_in: VehicleOwnerBase) -> VehicleOwner:
-    existing_user = db.query(VehicleOwner).filter(VehicleOwner.mobile_number == user_in.mobile_number).first()
-    if existing_user:
-        raise HTTPException(status_code=400, detail="User Number already registered")
+def create_user(db: Session, user_in: VehicleOwnerBase) -> VehicleOwnerCredentials:
+    # Check for duplicate primary number in main vehicle_owner table
+    existing_user = db.query(VehicleOwnerCredentials).filter(
+        VehicleOwnerCredentials.primary_number == user_in.primary_number
+    ).first()
 
+    if existing_user:
+        raise HTTPException(status_code=400, detail="Mobile number already registered")
+
+    # Step 1: Hash password
     hashed_password = get_password_hash(user_in.password)
-    db_user = VehicleOwner(
-        full_name=user_in.full_name,
-        mobile_number=user_in.mobile_number,
+
+    # Step 2: Create credentials object
+    credentials = VehicleOwnerCredentials(
+        organization_id=user_in.organization_id,
+        primary_number=user_in.primary_number,
         hashed_password=hashed_password,
+        account_status="INACTIVE",
+        driver_profile=0,
+        car_profile=0,
     )
-    db.add(db_user)
+
+    db.add(credentials)
+    db.flush()  # Important: So we get credentials.id before commit
+
+    # Step 3: Create details object
+    details = VehicleOwnerDetails(
+        vehicle_owner_id=credentials.id,
+        organization_id=user_in.organization_id,
+        full_name=user_in.full_name,
+        primary_number=user_in.primary_number,
+        secondary_number=user_in.secondary_number,
+        wallet_balance=0,
+        gpay_number=user_in.gpay_number,
+        aadhar_number=user_in.aadhar_number,
+        aadhar_front_img=user_in.aadhar_front_img,
+        adress=user_in.address
+    )
+
+    db.add(details)
     db.commit()
-    db.refresh(db_user)
-    return db_user
+    db.refresh(credentials)
+
+    return credentials
+
+# def create_user(db: Session, user_in: VehicleOwnerBase) -> VehicleOwner:
+#     existing_user = db.query(VehicleOwner).filter(VehicleOwner.mobile_number == user_in.mobile_number).first()
+#     if existing_user:
+#         raise HTTPException(status_code=400, detail="User Number already registered")
+
+#     hashed_password = get_password_hash(user_in.password)
+#     db_user = VehicleOwner(
+#         full_name=user_in.full_name,
+#         mobile_number=user_in.mobile_number,
+#         hashed_password=hashed_password,
+#     )
+#     db.add(db_user)
+#     db.commit()
+#     db.refresh(db_user)
+#     return db_user
 
 # def get_user(db: Session, user_id: int) -> Optional[User]:
 #     return db.query(User).filter(User.id == user_id).first()

@@ -1,28 +1,43 @@
-from pydantic import BaseModel, Field, constr
-from typing import Pattern  
+from pydantic import BaseModel, Field
+from typing import Optional, Annotated
 from uuid import UUID
 from datetime import datetime
-from enum import Enum
 
+# --- Regex pattern for Indian mobile numbers ---
+indian_phone_pattern = r'^(?:\+91)?[6-9]\d{9}$'
 
-# --- Enum to match SQLAlchemy Enum ---
-
-# --- Base Schema (shared fields) ---
+# --- Base Schema ---
 class VehicleOwnerBase(BaseModel):
-    organization_id: str | None = None
-    full_name: constr = Field(..., min_length=3, max_length=100)
-    phone_number: constr = Field(
-        ...,
-        Pattern=r'^(?:\+91)?[6-9]\d{9}$',
-        description="Indian mobile phone number, with optional +91 country code"
-    )
-    account_status: str
-    hashed_password: str
+    organization_id: Optional[str] = None
+
+    full_name: Annotated[str, Field(min_length=3, max_length=100)]
+
+    primary_number: Annotated[str, Field(
+        pattern=indian_phone_pattern,
+        description="Indian mobile number, with optional +91 country code"
+    )]
+
+    secondary_number: Annotated[str, Field(
+        pattern=indian_phone_pattern,
+        description="Indian mobile number, with optional +91 country code"
+    )]
+
+    gpay_number: Annotated[str, Field(
+        pattern=indian_phone_pattern,
+        description="Indian mobile number, with optional +91 country code"
+    )]
+
+    password: str
+    address: str
+    aadhar_number: str
+    aadhar_front_img: str
+
     owner_profile_status: bool = False
     driver_profile: bool = False
     car_profile: bool = False
 
-# --- Output schema ---
+
+# --- Output Schema ---
 class VehicleOwnerOut(VehicleOwnerBase):
     id: UUID
     created_at: datetime
@@ -34,8 +49,13 @@ class VehicleOwnerOut(VehicleOwnerBase):
                 "id": "d290f1ee-6c54-4b01-90e6-d701748f0851",
                 "organization_id": "org_123",
                 "full_name": "Jane Doe",
-                "phone_number": "+12345678901",
-                "account_status": "Inactive",
+                "primary_number": "+919876543210",
+                "secondary_number": "+919876543211",
+                "gpay_number": "+919876543212",
+                "password": "secret123",
+                "address": "123 Main Street, Mumbai",
+                "aadhar_number": "123456789012",
+                "aadhar_front_img": "https://example.com/aadhar_front.jpg",
                 "owner_profile_status": False,
                 "driver_profile": False,
                 "car_profile": False,
