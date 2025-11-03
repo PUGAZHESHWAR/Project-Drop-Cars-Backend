@@ -9,6 +9,8 @@ from app.core.security import create_access_token, get_current_admin
 from app.database.session import get_db
 from app.utils.gcs import upload_image_to_gcs
 from typing import List, Optional
+from uuid import UUID
+from datetime import datetime
 import os
 
 router = APIRouter()
@@ -278,6 +280,261 @@ async def get_admin_by_id_route(
             detail=f"Internal server error: {str(e)}"
         )
 
+
+# === Admin: Orders Management ===
+
+@router.get("/admin/orders")
+async def admin_list_orders(
+    vendor_id: Optional[str] = None,
+    trip_status: Optional[str] = None,
+    source: Optional[str] = None,
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    current_admin = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    from app.models.orders import Order, OrderSourceEnum
+    query = db.query(Order)
+    if vendor_id:
+        query = query.filter(Order.vendor_id == vendor_id)
+    if trip_status:
+        query = query.filter(Order.trip_status == trip_status)
+    if source:
+        try:
+            query = query.filter(Order.source == OrderSourceEnum(source))
+        except Exception:
+            raise HTTPException(status_code=400, detail="Invalid source")
+    if start_date:
+        try:
+            dt = datetime.fromisoformat(start_date)
+            query = query.filter(Order.created_at >= dt)
+        except Exception:
+            raise HTTPException(status_code=400, detail="Invalid start_date (use ISO format)")
+    if end_date:
+        try:
+            dt = datetime.fromisoformat(end_date)
+            query = query.filter(Order.created_at <= dt)
+        except Exception:
+            raise HTTPException(status_code=400, detail="Invalid end_date (use ISO format)")
+    return query.order_by(Order.created_at.desc()).all()
+
+
+@router.patch("/admin/orders/{order_id}/cancel")
+async def admin_cancel_order(
+    order_id: int,
+    reason: Optional[str] = Form(None),
+    current_admin = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    from app.models.orders import Order
+    order = db.query(Order).filter(Order.id == order_id).first()
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+    order.trip_status = "CANCELLED"
+    order.cancelled_by = "ADMIN"
+    db.commit()
+    db.refresh(order)
+    return {"order_id": order.id, "trip_status": order.trip_status, "cancelled_by": order.cancelled_by, "reason": reason}
+
+
+# === Admin: Drivers Management ===
+
+@router.get("/admin/drivers")
+async def admin_list_drivers(
+    vehicle_owner_id: Optional[str] = None,
+    status_filter: Optional[str] = None,
+    current_admin = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    from app.models.car_driver import CarDriver, AccountStatusEnum
+    query = db.query(CarDriver)
+    if vehicle_owner_id:
+        query = query.filter(CarDriver.vehicle_owner_id == vehicle_owner_id)
+    if status_filter:
+        try:
+            query = query.filter(CarDriver.driver_status == AccountStatusEnum(status_filter))
+        except Exception:
+            raise HTTPException(status_code=400, detail="Invalid status_filter")
+    return query.order_by(CarDriver.created_at.desc()).all()
+
+
+@router.patch("/admin/drivers/{driver_id}/status")
+async def admin_update_driver_status(
+    driver_id: str,
+    new_status: str = Form(...),
+    current_admin = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    from app.models.car_driver import CarDriver, AccountStatusEnum
+    driver = db.query(CarDriver).filter(CarDriver.id == driver_id).first()
+    if not driver:
+        raise HTTPException(status_code=404, detail="Driver not found")
+    try:
+        driver.driver_status = AccountStatusEnum(new_status)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid new_status")
+    db.commit()
+    db.refresh(driver)
+    return {"driver_id": str(driver.id), "new_status": driver.driver_status}
+
+
+@router.patch("/admin/drivers/{driver_id}/document-status")
+async def admin_update_driver_document_status(
+    driver_id: str,
+    status_value: str = Form(...),
+    current_admin = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    from app.models.car_driver import CarDriver
+    from app.models.common_enums import DocumentStatusEnum
+    driver = db.query(CarDriver).filter(CarDriver.id == driver_id).first()
+    if not driver:
+        raise HTTPException(status_code=404, detail="Driver not found")
+    try:
+        driver.licence_front_status = DocumentStatusEnum(status_value)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid document status")
+    db.commit()
+    db.refresh(driver)
+    return {"driver_id": str(driver.id), "licence_status": driver.licence_front_status}
+
+
+# === Admin: Vehicle Owners Management ===
+
+@router.get("/admin/vehicle-owners")
+async def admin_list_vehicle_owners(
+    mobile: Optional[str] = None,
+    city: Optional[str] = None,
+    current_admin = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    from app.models.vehicle_owner_details import VehicleOwnerDetails
+    query = db.query(VehicleOwnerDetails)
+    if mobile:
+        query = query.filter(VehicleOwnerDetails.primary_number == mobile)
+    if city:
+        query = query.filter(VehicleOwnerDetails.city == city)
+    return query.order_by(VehicleOwnerDetails.created_at.desc()).all()
+
+
+@router.patch("/admin/vehicle-owners/{owner_id}/document-status")
+async def admin_update_owner_document_status(
+    owner_id: str,
+    status_value: str = Form(...),
+    current_admin = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    from app.models.vehicle_owner_details import VehicleOwnerDetails
+    from app.models.common_enums import DocumentStatusEnum
+    details = db.query(VehicleOwnerDetails).filter(VehicleOwnerDetails.vehicle_owner_id == owner_id).first()
+    if not details:
+        raise HTTPException(status_code=404, detail="Vehicle owner not found")
+    try:
+        details.aadhar_status = DocumentStatusEnum(status_value)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid document status")
+    db.commit()
+    db.refresh(details)
+    return {"vehicle_owner_id": str(details.vehicle_owner_id), "aadhar_status": details.aadhar_status}
+
+
+# === Admin: Vendors Management ===
+
+@router.get("/admin/vendors")
+async def admin_list_vendors(
+    mobile: Optional[str] = None,
+    city: Optional[str] = None,
+    current_admin = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    from app.models.vendor_details import VendorDetails
+    query = db.query(VendorDetails)
+    if mobile:
+        query = query.filter(VendorDetails.primary_number == mobile)
+    if city:
+        query = query.filter(VendorDetails.city == city)
+    return query.order_by(VendorDetails.created_at.desc()).all()
+
+
+@router.patch("/admin/vendors/{vendor_id}/document-status")
+async def admin_update_vendor_document_status(
+    vendor_id: str,
+    status_value: str = Form(...),
+    current_admin = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    from app.models.vendor_details import VendorDetails
+    from app.models.common_enums import DocumentStatusEnum
+    details = db.query(VendorDetails).filter(VendorDetails.vendor_id == vendor_id).first()
+    if not details:
+        raise HTTPException(status_code=404, detail="Vendor not found")
+    try:
+        details.aadhar_status = DocumentStatusEnum(status_value)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid document status")
+    db.commit()
+    db.refresh(details)
+    return {"vendor_id": str(details.vendor_id), "aadhar_status": details.aadhar_status}
+
+
+# === Admin: Wallets & Transactions Views ===
+
+@router.get("/admin/vehicle-owners/{owner_id}/wallet/ledger")
+async def admin_owner_wallet_ledger(
+    owner_id: str,
+    current_admin = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    from app.models.wallet_ledger import WalletLedger
+    return db.query(WalletLedger).filter(WalletLedger.vehicle_owner_id == owner_id).order_by(WalletLedger.created_at.desc()).all()
+
+
+@router.get("/admin/vendors/{vendor_id}/wallet/ledger")
+async def admin_vendor_wallet_ledger(
+    vendor_id: str,
+    current_admin = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    from app.models.vendor_wallet_ledger import VendorWalletLedger
+    return db.query(VendorWalletLedger).filter(VendorWalletLedger.vendor_id == vendor_id).order_by(VendorWalletLedger.created_at.desc()).all()
+
+
+@router.get("/admin/admin-wallet/ledger")
+async def admin_wallet_ledger(
+    current_admin = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    from app.models.admin_wallet_ledger import AdminWalletLedger
+    return db.query(AdminWalletLedger).filter(AdminWalletLedger.admin_id == current_admin.id).order_by(AdminWalletLedger.created_at.desc()).all()
+
+
+@router.get("/admin/admin-wallet/balance")
+async def get_admin_wallet_balance(
+    current_admin = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    from app.crud.admin_wallet import get_admin_balance
+    balance = get_admin_balance(db, str(current_admin.id))
+    return {"admin_id": str(current_admin.id), "current_balance": balance}
+
+
+@router.get("/admin/razorpay-transactions")
+async def admin_list_razorpay_transactions(
+    status_filter: Optional[str] = None,
+    owner_id: Optional[str] = None,
+    current_admin = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    from app.models.razorpay_transactions import RazorpayTransaction, RazorpayPaymentStatusEnum
+    query = db.query(RazorpayTransaction)
+    if owner_id:
+        query = query.filter(RazorpayTransaction.vehicle_owner_id == owner_id)
+    if status_filter:
+        try:
+            query = query.filter(RazorpayTransaction.status == RazorpayPaymentStatusEnum(status_filter))
+        except Exception:
+            raise HTTPException(status_code=400, detail="Invalid status_filter")
+    return query.order_by(RazorpayTransaction.created_at.desc()).all()
 
 @router.post("/admin/search-vehicle-owner", response_model=VehicleOwnerInfoResponse, status_code=status.HTTP_200_OK)
 async def search_vehicle_owner(
