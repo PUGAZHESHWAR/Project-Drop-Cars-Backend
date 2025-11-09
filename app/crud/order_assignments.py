@@ -329,6 +329,9 @@ def get_pending_orders_for_vehicle_owner(db: Session, vehicle_owner_id: str) -> 
         if not latest_assignment:
             if order.source == OrderSourceEnum.NEW_ORDERS:
                 new_order = db.query(NewOrder).filter(NewOrder.order_id == order.source_order_id).first()
+                
+                if not new_order:
+                    continue  # Skip if new_order not found
 
                 pending_orders.append({
                     "order_id": order.id,
@@ -345,12 +348,16 @@ def get_pending_orders_for_vehicle_owner(db: Session, vehicle_owner_id: str) -> 
                     "estimated_price": order.estimated_price,
                     "toll_charge_update":order.toll_charge_update,
                     "max_time_to_assign_order": order.max_time_to_assign_order,
-                    "pickup_notes": new_order.pickup_notes,
+                    "pickup_notes": new_order.pickup_notes if new_order else None,
                     "created_at": order.created_at,
-                    "charges_to_deduct" : round((order.vendor_price-order.estimated_price)+((new_order.cost_per_km*new_order.trip_distance)*10/100))
+                    "charges_to_deduct" : round((order.vendor_price-order.estimated_price)+((new_order.cost_per_km*new_order.trip_distance)*10/100)) if new_order else 0
                 })
             elif order.source == OrderSourceEnum.HOURLY_RENTAL:
                 hourly_order = db.query(HourlyRental).filter(HourlyRental.id == order.source_order_id).first()
+                
+                if not hourly_order:
+                    continue  # Skip if hourly_order not found
+                
                 pending_orders.append({
                     "order_id": order.id,
                     "trip_status": order.trip_status,
@@ -535,6 +542,10 @@ def get_driver_assigned_orders_report(db: Session, driver_id: str, order_id : in
                 })
         else:
             new_order = db.query(NewOrder).filter(NewOrder.order_id == order.source_order_id).first()
+            
+            if not new_order:
+                raise HTTPException(status_code=404, detail="NewOrder not found for this order")
+            
             end_records = db.query(EndRecord).filter(EndRecord.order_id == order.id).first()
             total_km = end_records.end_km - end_records.start_km if end_records else 0
             result.append({
@@ -552,7 +563,7 @@ def get_driver_assigned_orders_report(db: Session, driver_id: str, order_id : in
                 "car_type": order.car_type if order.car_type else "Unknown",
                 "trip_time": order.trip_time,
                 "trip_distance": order.trip_distance if order.trip_distance else 0,
-                "toll_charges": order.updated_toll_charges if order.updated_toll_charges else new_order.toll_charges,
+                "toll_charges": order.updated_toll_charges if order.updated_toll_charges else (new_order.toll_charges if new_order else 0),
                 "customer_price": order.closed_vendor_price,
                 "vendor_name" : vendor_detail_show.full_name,
                 "vendor_primary_number" : vendor_detail_show.primary_number,
