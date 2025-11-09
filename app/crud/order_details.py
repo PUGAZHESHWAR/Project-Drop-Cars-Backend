@@ -447,7 +447,8 @@ def get_vehicle_owner_orders_by_assignment_status(
                 permit_charge_val = new_order.permit_charges
                 hills_charge_val = new_order.hill_charges
                 toll_charge_val = new_order.toll_charges
-                # waiting_charge not defined for NEW_ORDERS; leave None
+                # Get waiting charge from order.waiting_time (stored when trip ends)
+                waiting_charge_val = order.waiting_time if order.waiting_time is not None else None
         elif order.source == "HOURLY_RENTAL":
             hourly_rental = db.query(HourlyRental).filter(HourlyRental.id == order.source_order_id).first()
             if hourly_rental:
@@ -488,6 +489,7 @@ def get_vehicle_owner_orders_by_assignment_status(
             hills_charge=hills_charge_val,
             toll_charge=toll_charge_val,
             waiting_charge=waiting_charge_val,
+            night_charges=order.night_charges,
             
             # Assignment information
             assignment_id=assignment.id,
@@ -569,7 +571,10 @@ def get_vehicle_owner_non_pending_orders(db: Session, vehicle_owner_id: str) -> 
         # Source-specific waiting charge mapping
         waiting_charge_val = None
         try:
-            if order.source.value == "HOURLY_RENTAL":
+            if order.source.value == "NEW_ORDERS":
+                # Get waiting charge from order.waiting_time (stored when trip ends)
+                waiting_charge_val = order.waiting_time if order.waiting_time is not None else None
+            elif order.source.value == "HOURLY_RENTAL":
                 hourly = db.query(HourlyRental).filter(HourlyRental.id == order.source_order_id).first()
                 if hourly:
                     waiting_charge_val = hourly.extra_cost_per_hour
