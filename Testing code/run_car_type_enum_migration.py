@@ -124,3 +124,4 @@ if __name__ == "__main__":
         print("\n💥 Migration failed. Please check the error messages above.")
         print("Make sure your database is accessible and you have the necessary permissions.")
 
+
