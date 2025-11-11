@@ -3,10 +3,12 @@ import uuid
 import os
 from fastapi import UploadFile
 from datetime import timedelta
+from pathlib import Path
 
-
-
-GCS_CREDENTIALS = "app/core/drop-cars-468718-d08441443ada.json"
+# Get the absolute path to the credentials file
+# From app/utils/gcs.py, go up one level to app/, then into core/
+BASE_DIR = Path(__file__).resolve().parent.parent
+GCS_CREDENTIALS = str(BASE_DIR / "core" / "drop-cars-473714-b5e0ebd5f0ab.json")
 GCS_BUCKET_NAME = "drop-cars-test-bucket"
 
 client = storage.Client.from_service_account_json(GCS_CREDENTIALS)
