@@ -105,7 +105,7 @@ def calculate_multisegment_fare(pickup_drop_location: Dict[str, str], cost_per_k
         "hill_charges": int(hill_charges),
         "toll_charges": int(toll_charges),
         "total_amount": int(total_amount),
-        "Commission_percent": admin_commession_env,
+        "Commission_percent": int(admin_commession_env) if admin_commession_env else 10,
     }
 
 
@@ -155,7 +155,7 @@ def create_oneway_order(
         pickup_notes=pickup_notes,
         trip_distance = trip_distance,
         trip_time = trip_time,
-        platform_fees_percent = admin_commession_env,
+        platform_fees_percent = platform_fees_percent if platform_fees_percent is not None else (int(admin_commession_env) if admin_commession_env else 10),
         trip_status="PENDING",
         estimated_price = (cost_per_km * trip_distance) + driver_allowance + hill_charges + permit_charges + toll_charges,
         vendor_price = ((cost_per_km + extra_cost_per_km) * trip_distance) + (driver_allowance + extra_driver_allowance) + (permit_charges + extra_permit_charges) + hill_charges + toll_charges,

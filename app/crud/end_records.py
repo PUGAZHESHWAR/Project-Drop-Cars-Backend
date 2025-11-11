@@ -4,7 +4,7 @@ from datetime import datetime
 from app.models.end_records import EndRecord
 from app.models.order_assignments import OrderAssignment, AssignmentStatusEnum
 from app.models.orders import Order
-from app.models.new_orders import NewOrder
+from app.models.new_orders import NewOrder, OrderTypeEnum
 from app.models.hourly_rental import HourlyRental
 from app.models.car_driver import CarDriver, AccountStatusEnum
 from app.models.vendor_details import VendorDetails
