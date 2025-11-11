@@ -7,6 +7,7 @@ from app.utils.maps import get_distance_km_between_locations
 from app.crud.orders import create_master_from_new_order
 
 admin_commession_env = os.getenv("ADMIN_COMMESSION_ENV")
+vendor_commession_env = os.getenv("VENDOR_COMMESSION_ENV")
 
 
 def _origin_and_destination_from_index_map(index_map: Dict[str, str]) -> (str, str):
@@ -17,20 +18,29 @@ def _origin_and_destination_from_index_map(index_map: Dict[str, str]) -> (str, s
     return index_map[origin_key], index_map[destination_key]
 
 
-def calculate_oneway_fare(pickup_drop_location: Dict[str, str], cost_per_km: int, driver_allowance: int, extra_driver_allowance: int, permit_charges: int,extra_permit_charges: int, hill_charges: int, toll_charges: int, extra_cost_per_km:int) -> Dict[str, Any]:
+def calculate_oneway_fare(pickup_drop_location: Dict[str, str], cost_per_km: int, driver_allowance: int, extra_driver_allowance: int, permit_charges: int,extra_permit_charges: int, hill_charges: int, toll_charges: int, extra_cost_per_km:int, night_charges : int) -> Dict[str, Any]:
     origin, destination = _origin_and_destination_from_index_map(pickup_drop_location)
     total_km,duration_text = get_distance_km_between_locations(origin, destination)
     base_km_amount = int(round(total_km * cost_per_km))
     extra_base_km_amount = int(round(total_km * extra_cost_per_km))
     
-
+    print("night charges",night_charges)
     total_amount = base_km_amount + extra_base_km_amount \
         + int(driver_allowance) \
         + int(extra_driver_allowance) \
         + int(permit_charges) \
         + int(extra_permit_charges) \
         + int(hill_charges) \
-        + int(toll_charges)
+        + int(toll_charges) \
+        + int (night_charges)
+    
+    driver_amount = base_km_amount \
+        + int(driver_allowance) \
+        + int (permit_charges) \
+        + int(hill_charges) \
+        + int(toll_charges) \
+        + int (night_charges)
+    
 
     return {
         "total_km": total_km,
@@ -44,6 +54,9 @@ def calculate_oneway_fare(pickup_drop_location: Dict[str, str], cost_per_km: int
         "toll_charges": int(toll_charges),
         "total_amount": int(total_amount),
         "Commission_percent": admin_commession_env,
+        "vendor_commission_percent" : vendor_commession_env,
+        "customer_amount" : total_amount,
+        "driver_amount" : driver_amount
     }
 
 

@@ -8,6 +8,7 @@ from app.models.new_orders import NewOrder
 from app.models.hourly_rental import HourlyRental
 from app.models.car_driver import CarDriver, AccountStatusEnum
 from app.models.vendor_details import VendorDetails
+from app.models.orders import OrderTypeEnum
 from app.crud.notification import send_trip_status_notification_to_vendor_and_vehicle_owner
 async def create_start_trip_record(
     db: Session,

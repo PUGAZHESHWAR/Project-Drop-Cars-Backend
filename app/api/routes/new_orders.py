@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import Optional, List, Dict
-
+import os
 from app.database.session import get_db
 from app.core.security import get_current_vendor
 from app.schemas.new_orders import (
@@ -24,7 +24,7 @@ from app.crud.orders import get_vendor_orders, recreate_order
 
 
 router = APIRouter()
-
+admin_commession_env = os.getenv("ADMIN_COMMESSION_ENV")
 
 @router.post("/oneway/quote", response_model=OnewayQuoteResponse)
 async def oneway_quote(payload: OnewayQuoteRequest):
@@ -39,6 +39,7 @@ async def oneway_quote(payload: OnewayQuoteRequest):
             payload.hill_charges,
             payload.toll_charges,
             payload.extra_cost_per_km,
+            payload.night_charges,
         )
         return OnewayQuoteResponse(
             fare=FareBreakdown(**fare),
@@ -109,7 +110,7 @@ async def oneway_confirm(
             pickup_notes=payload.pickup_notes or "",
             trip_distance = fare["total_km"],
             trip_time = fare["trip_time"],
-            platform_fees_percent = 10,
+            platform_fees_percent = admin_commession_env,
             pick_near_city=pick_near_city,
             max_time_to_assign_order=payload.max_time_to_assign_order,
             toll_charge_update=payload.toll_charge_update,

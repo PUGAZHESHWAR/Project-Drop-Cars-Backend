@@ -207,6 +207,7 @@ class OnewayQuoteRequest(BaseModel):
     extra_permit_charges: int
     hill_charges: int
     toll_charges: int
+    night_charges : int
     pickup_notes: Optional[str] = None
     max_time_to_assign_order: Optional[int] = Field(
         default=15, 
@@ -267,6 +268,10 @@ class FareBreakdown(BaseModel):
     total_amount: int
     # commission_amount: int
     Commission_percent: int
+    vendor_commission_percent : int
+    customer_amount : int
+    driver_amount : int
+    
 
 
 class OnewayQuoteResponse(BaseModel):
