@@ -278,6 +278,8 @@ class FareBreakdown(BaseModel):
     vendor_commission_percent : int
     customer_amount : int
     driver_amount : int
+    vendor_basic_commession_amount : int
+    remark_trip_min_km : int
     
 
 

@@ -40,6 +40,7 @@ async def oneway_quote(payload: OnewayQuoteRequest):
             payload.toll_charges,
             payload.extra_cost_per_km,
             payload.night_charges,
+            payload.trip_type
         )
         return OnewayQuoteResponse(
             fare=FareBreakdown(**fare),
@@ -87,6 +88,8 @@ async def oneway_confirm(
             payload.hill_charges,
             payload.toll_charges,
             payload.extra_cost_per_km,
+            payload.trip_type
+            
         )
         
         # Persist order
@@ -152,6 +155,8 @@ async def roundtrip_quote(payload: RoundTripQuoteRequest):
             payload.hill_charges,
             payload.toll_charges,
             payload.extra_cost_per_km,
+            payload.night_charges,
+            payload.trip_type
         )
         return OnewayQuoteResponse(
             fare=FareBreakdown(**fare),
@@ -194,7 +199,9 @@ async def roundtrip_confirm(
             payload.extra_permit_charges,
             payload.hill_charges,
             payload.toll_charges,
-            payload.extra_cost_per_km
+            payload.extra_cost_per_km,
+            payload.trip_type
+            
         )
 
         new_order, master_order_id = create_oneway_order(
@@ -257,7 +264,9 @@ async def multicity_quote(payload: MulticityQuoteRequest):
             payload.extra_permit_charges,
             payload.hill_charges,
             payload.toll_charges,
-            payload.extra_cost_per_km
+            payload.extra_cost_per_km,
+            payload.night_charges,
+            payload.trip_type
         )
         return OnewayQuoteResponse(
             fare=FareBreakdown(**fare),
@@ -301,6 +310,8 @@ async def multicity_confirm(
             payload.hill_charges,
             payload.toll_charges,
             payload.extra_cost_per_km,
+            payload.trip_type
+            
         )
 
         new_order, master_order_id = create_oneway_order(
