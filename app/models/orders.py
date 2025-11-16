@@ -41,6 +41,7 @@ class Order(Base):
     estimated_price = Column(Integer, nullable=True)
     vendor_price = Column(Integer, nullable=True)
     platform_fees_percent = Column(Integer, nullable=True)
+    vendor_fees_percent = Column(Integer, nullable=True)
 
     # Toll updates
     toll_charge_update = Column(Boolean, nullable=False, server_default='false')
@@ -62,6 +63,10 @@ class Order(Base):
     vendor_profit = Column(Integer, nullable=True)
     driver_profit = Column(Integer, nullable=True)
     admin_profit = Column(Integer, nullable=True)
+
+    # Additional charges/metrics
+    night_charges = Column(Integer, nullable=True)
+    waiting_time = Column(Integer, nullable=True)
 
     # Cancellation tracking
     cancelled_by = Column(SqlEnum(CancelledByEnum, name="cancelled_by_enum"), nullable=True)

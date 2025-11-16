@@ -1,10 +1,20 @@
 from sqlalchemy.orm import Session
 from uuid import UUID
 from typing import Dict, Any, List, Tuple
-
+import os
 from app.models.new_orders import NewOrder, OrderTypeEnum, CarTypeEnum
 from app.utils.maps import get_distance_km_between_locations
+import math
 from app.crud.orders import create_master_from_new_order
+
+admin_commession_env = int(os.getenv("ADMIN_COMMESSION_ENV"))
+vendor_commession_env = int(os.getenv("VENDOR_COMMESSION_ENV"))
+
+min_km_for_trip = {
+    "Oneway" : 130,
+    "ROUND_TRIP" : 250,
+    "MULTY_CITY" : 130
+}
 
 
 def _origin_and_destination_from_index_map(index_map: Dict[str, str]) -> (str, str):
@@ -15,20 +25,36 @@ def _origin_and_destination_from_index_map(index_map: Dict[str, str]) -> (str, s
     return index_map[origin_key], index_map[destination_key]
 
 
-def calculate_oneway_fare(pickup_drop_location: Dict[str, str], cost_per_km: int, driver_allowance: int, extra_driver_allowance: int, permit_charges: int,extra_permit_charges: int, hill_charges: int, toll_charges: int, extra_cost_per_km:int) -> Dict[str, Any]:
+def calculate_oneway_fare(pickup_drop_location: Dict[str, str], cost_per_km: int, driver_allowance: int, extra_driver_allowance: int, permit_charges: int,extra_permit_charges: int, hill_charges: int, toll_charges: int, extra_cost_per_km:int, night_charges : int, trip_type : str) -> Dict[str, Any]:
     origin, destination = _origin_and_destination_from_index_map(pickup_drop_location)
     total_km,duration_text = get_distance_km_between_locations(origin, destination)
+    remark_trip_min_km = 0
+    if trip_type.value == OrderTypeEnum.ONEWAY.value and total_km < min_km_for_trip["Oneway"]:
+        remark_trip_min_km = total_km
+        total_km = min_km_for_trip["Oneway"]
     base_km_amount = int(round(total_km * cost_per_km))
     extra_base_km_amount = int(round(total_km * extra_cost_per_km))
-    
 
+    
+    
+    print("night charges",night_charges)
     total_amount = base_km_amount + extra_base_km_amount \
         + int(driver_allowance) \
         + int(extra_driver_allowance) \
         + int(permit_charges) \
         + int(extra_permit_charges) \
         + int(hill_charges) \
-        + int(toll_charges)
+        + int(toll_charges) \
+        + int (night_charges)
+    
+    driver_amount = base_km_amount \
+        + int(driver_allowance) \
+        + int (permit_charges) \
+        + int(hill_charges) \
+        + int(toll_charges) \
+        + int (night_charges)
+    vendor_basic_commession_amount = math.ceil(((base_km_amount) * vendor_commession_env / 100))
+    
 
     return {
         "total_km": total_km,
@@ -41,7 +67,12 @@ def calculate_oneway_fare(pickup_drop_location: Dict[str, str], cost_per_km: int
         "hill_charges": int(hill_charges),
         "toll_charges": int(toll_charges),
         "total_amount": int(total_amount),
-        "Commission_percent": 10,
+        "Commission_percent": admin_commession_env,
+        "vendor_commission_percent" : vendor_commession_env,
+        "customer_amount" : total_amount,
+        "driver_amount" : driver_amount,
+        "vendor_basic_commession_amount" : vendor_basic_commession_amount,
+        "remark_trip_min_km" : remark_trip_min_km
     }
 
 
@@ -66,8 +97,15 @@ def _sum_multisegment_distance_and_duration(index_map: Dict[str, str]) -> (float
     return round(total_km_sum), duration_text
 
 
-def calculate_multisegment_fare(pickup_drop_location: Dict[str, str], cost_per_km: int, driver_allowance: int, extra_driver_allowance: int, permit_charges: int, extra_permit_charges: int, hill_charges: int, toll_charges: int, extra_cost_per_km:int) -> Dict[str, Any]:
+def calculate_multisegment_fare(pickup_drop_location: Dict[str, str], cost_per_km: int, driver_allowance: int, extra_driver_allowance: int, permit_charges: int, extra_permit_charges: int, hill_charges: int, toll_charges: int, extra_cost_per_km:int, night_charges:int, trip_type:str) -> Dict[str, Any]:
     total_km, duration_text = _sum_multisegment_distance_and_duration(pickup_drop_location)
+    remark_trip_min_km = 0
+    if trip_type.value == OrderTypeEnum.ROUND_TRIP.value and total_km < min_km_for_trip["ROUND_TRIP"]:
+        remark_trip_min_km = total_km
+        total_km = min_km_for_trip["ROUND_TRIP"]
+    if trip_type.value == OrderTypeEnum.MULTY_CITY.value and total_km < min_km_for_trip["MULTY_CITY"]:
+        remark_trip_min_km = total_km
+        total_km = min_km_for_trip["MULTY_CITY"]
     base_km_amount = int(round(total_km * cost_per_km))
     extra_base_km_amount = int(round(total_km * extra_cost_per_km))
 
@@ -77,7 +115,17 @@ def calculate_multisegment_fare(pickup_drop_location: Dict[str, str], cost_per_k
         + int(permit_charges) \
         + int(extra_permit_charges) \
         + int(hill_charges) \
-        + int(toll_charges)
+        + int(toll_charges) \
+        + int(night_charges)
+        
+    driver_amount = base_km_amount \
+        + int(driver_allowance) \
+        + int (permit_charges) \
+        + int(hill_charges) \
+        + int(toll_charges) \
+        + int (night_charges)
+    
+    vendor_basic_commession_amount = math.ceil(((base_km_amount) * vendor_commession_env / 100))
 
     return {
         "total_km": total_km,
@@ -90,7 +138,12 @@ def calculate_multisegment_fare(pickup_drop_location: Dict[str, str], cost_per_k
         "hill_charges": int(hill_charges),
         "toll_charges": int(toll_charges),
         "total_amount": int(total_amount),
-        "Commission_percent": 10,
+        "Commission_percent": int(admin_commession_env) if admin_commession_env else 10,
+        "vendor_commission_percent" : vendor_commession_env,
+        "customer_amount" : total_amount,
+        "driver_amount" : driver_amount,
+        "vendor_basic_commession_amount" : vendor_basic_commession_amount,
+        "remark_trip_min_km" : remark_trip_min_km
     }
 
 
@@ -119,6 +172,9 @@ def create_oneway_order(
     pick_near_city: list,
     max_time_to_assign_order: int = 15,
     toll_charge_update: bool = False,
+    night_charges: int | None = None,
+    estimated_cal_price: int,
+    vendor_cal_price : int
 ) -> Tuple[NewOrder, int]:
     new_order = NewOrder(
         vendor_id=vendor_id,
@@ -139,18 +195,18 @@ def create_oneway_order(
         pickup_notes=pickup_notes,
         trip_distance = trip_distance,
         trip_time = trip_time,
-        platform_fees_percent = 10,
+        platform_fees_percent = admin_commession_env,
         trip_status="PENDING",
-        estimated_price = (cost_per_km * trip_distance) + driver_allowance + hill_charges + permit_charges + toll_charges,
-        vendor_price = ((cost_per_km + extra_cost_per_km) * trip_distance) + (driver_allowance + extra_driver_allowance) + (permit_charges + extra_permit_charges) + hill_charges + toll_charges,
-        pick_near_city=pick_near_city,
+        pick_near_city = pick_near_city,
+        estimated_price = estimated_cal_price,
+        vendor_price = vendor_cal_price,
     )
     # print(cost_per_km,trip_distance,driver_allowance,hill_charges,permit_charges,toll_charges)
     db.add(new_order)
     db.commit()
     db.refresh(new_order)
     # Also create/refresh master order row
-    master_order = create_master_from_new_order(db, new_order, max_time_to_assign_order, toll_charge_update)
+    master_order = create_master_from_new_order(db, new_order, max_time_to_assign_order, toll_charge_update, night_charges=night_charges)
     return new_order, master_order.id
 
 

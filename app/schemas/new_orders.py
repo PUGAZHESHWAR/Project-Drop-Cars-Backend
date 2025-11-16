@@ -16,12 +16,19 @@ class OrderType(str,Enum):
 
 
 class CarType(str,Enum):
-    HATCHBACK = "Hatchback"
-    SEDAN = "Sedan"
-    NEW_SEDAN = "New Sedan"
+    HATCHBACK = "HATCHBACK"
+    SEDAN_4_PLUS_1 = "SEDAN_4_PLUS_1"
+    NEW_SEDAN_2022_MODEL = "NEW_SEDAN_2022_MODEL"
+    ETIOS_4_PLUS_1 = "ETIOS_4_PLUS_1"
     SUV = "SUV"
-    INNOVA = "Innova"
-    INNOVA_CRYSTA = "Innova Crysta"
+    SUV_6_PLUS_1 = "SUV_6_PLUS_1"
+    SUV_7_PLUS_1 = "SUV_7_PLUS_1"
+    INNOVA = "INNOVA"
+    INNOVA_6_PLUS_1 = "INNOVA_6_PLUS_1"
+    INNOVA_7_PLUS_1 = "INNOVA_7_PLUS_1"
+    INNOVA_CRYSTA = "INNOVA_CRYSTA"
+    INNOVA_CRYSTA_6_PLUS_1 = "INNOVA_CRYSTA_6_PLUS_1"
+    INNOVA_CRYSTA_7_PLUS_1 = "INNOVA_CRYSTA_7_PLUS_1"
 
 
 class RentalOrderRequest(BaseModel):
@@ -207,6 +214,7 @@ class OnewayQuoteRequest(BaseModel):
     extra_permit_charges: int
     hill_charges: int
     toll_charges: int
+    night_charges : int
     pickup_notes: Optional[str] = None
     max_time_to_assign_order: Optional[int] = Field(
         default=15, 
@@ -236,6 +244,7 @@ class OnewayConfirmRequest(OnewayQuoteRequest):
     near_city: Optional[List[str]] = Field(
         default=None, description="City name when send_to is NEAR_CITY"
     )
+    night_charges: Optional[int] = Field(default=None, description="Optional night charges applied at creation")
 
 
 class RoundTripQuoteRequest(OnewayQuoteRequest):
@@ -266,6 +275,12 @@ class FareBreakdown(BaseModel):
     total_amount: int
     # commission_amount: int
     Commission_percent: int
+    vendor_commission_percent : int
+    customer_amount : int
+    driver_amount : int
+    vendor_basic_commession_amount : int
+    remark_trip_min_km : int
+    
 
 
 class OnewayQuoteResponse(BaseModel):

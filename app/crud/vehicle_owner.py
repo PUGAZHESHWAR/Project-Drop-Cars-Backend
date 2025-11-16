@@ -50,8 +50,6 @@ def create_user(db: Session, user_in: VehicleOwnerForm) -> VehicleOwnerCredentia
         primary_number=user_in.primary_number,
         hashed_password=hashed_password,
         account_status="INACTIVE",
-        driver_profile=0,
-        car_profile=0,
     )
 
     db.add(credentials)

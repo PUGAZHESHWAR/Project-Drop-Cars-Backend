@@ -2,7 +2,7 @@ from sqlalchemy.orm import Session
 from typing import List, Dict
 from datetime import datetime, timedelta
 from sqlalchemy import func, extract
-
+import os
 from app.models.orders import Order, OrderSourceEnum
 from app.models.end_records import EndRecord
 from app.utils.gcs import upload_image_to_gcs
@@ -13,8 +13,11 @@ from sqlalchemy.sql import or_, and_
 from app.crud.notification import send_push_notifications_vehicle_owner
 import asyncio
 
+vendor_commession_env = os.getenv("VENDOR_COMMESSION_ENV")
+admin_commession_env = int(os.getenv("ADMIN_COMMESSION_ENV"))
 
-def create_master_from_new_order(db: Session, new_order: NewOrder, max_time_to_assign_order: int = 15, toll_charge_update: bool = False) -> Order:
+
+def create_master_from_new_order(db: Session, new_order: NewOrder, max_time_to_assign_order: int = 15, toll_charge_update: bool = False, *, night_charges: int | None = None) -> Order:
     master = Order(
         source=OrderSourceEnum.NEW_ORDERS,
         source_order_id=new_order.order_id,
@@ -33,7 +36,9 @@ def create_master_from_new_order(db: Session, new_order: NewOrder, max_time_to_a
         vendor_price=new_order.vendor_price,
         platform_fees_percent=new_order.platform_fees_percent,
         max_time_to_assign_order=(datetime.utcnow() + timedelta(minutes=max_time_to_assign_order)),
-        toll_charge_update=toll_charge_update
+        toll_charge_update=toll_charge_update,
+        night_charges=night_charges,
+        vendor_fees_percent = vendor_commession_env
     )
     db.add(master)
     db.commit()
@@ -60,10 +65,11 @@ def create_master_from_hourly(db: Session, hourly: HourlyRental, *, pick_near_ci
         trip_time = trip_time,
         estimated_price = int(estimated_price),
         vendor_price = int(vendor_price),
-        platform_fees_percent = 10,
+        platform_fees_percent = admin_commession_env,
         trip_distance = hourly.package_hours['km_range'],
         max_time_to_assign_order=(datetime.utcnow() + timedelta(minutes=max_time_to_assign_order)),
-        toll_charge_update=toll_charge_update
+        toll_charge_update=toll_charge_update,
+        vendor_fees_percent = vendor_commession_env
     )
     db.add(master)
     db.commit()

@@ -12,12 +12,19 @@ class OrderTypeEnum(enum.Enum):
     MULTY_CITY = "Multy City"
 
 class CarTypeEnum(enum.Enum):
-    HATCHBACK = "Hatchback"
-    SEDAN = "Sedan"
-    NEW_SEDAN = "New Sedan"
+    HATCHBACK = "HATCHBACK"
+    SEDAN_4_PLUS_1 = "SEDAN_4_PLUS_1"
+    NEW_SEDAN_2022_MODEL = "NEW_SEDAN_2022_MODEL"
+    ETIOS_4_PLUS_1 = "ETIOS_4_PLUS_1"
     SUV = "SUV"
-    INNOVA = "Innova"
-    INNOVA_CRYSTA = "Innova Crysta"
+    SUV_6_PLUS_1 = "SUV_6_PLUS_1"
+    SUV_7_PLUS_1 = "SUV_7_PLUS_1"
+    INNOVA = "INNOVA"
+    INNOVA_6_PLUS_1 = "INNOVA_6_PLUS_1"
+    INNOVA_7_PLUS_1 = "INNOVA_7_PLUS_1"
+    INNOVA_CRYSTA = "INNOVA_CRYSTA"
+    INNOVA_CRYSTA_6_PLUS_1 = "INNOVA_CRYSTA_6_PLUS_1"
+    INNOVA_CRYSTA_7_PLUS_1 = "INNOVA_CRYSTA_7_PLUS_1"
 
 
 class NewOrder(Base):
