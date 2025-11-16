@@ -199,12 +199,12 @@ async def update_end_trip_record(
         # # Driver profit is the remainder from estimated side as per spec
         # driver_profit = max(0, int(estimated_total) - admin_profit)
 
-        commision_amount = 10
+        commision_amount = order.platform_fees_percent
         cal_driver_price = (hourly.cost_per_hour * hours_selected) + (balance_km * hourly.cost_for_addon_km)
         cal_vendor_price = ((hourly.cost_per_hour + hourly.extra_cost_per_hour) * hours_selected) + (balance_km * (hourly.cost_for_addon_km + hourly.extra_cost_for_addon_km))
 
         cal_vendor_profit = (cal_vendor_price - cal_driver_price)
-        cal_admin_profit = cal_vendor_profit * (commision_amount/100)
+        cal_admin_profit = math.ceil(cal_vendor_profit * (commision_amount/100))
 
 
         order.closed_vendor_price = cal_vendor_price
