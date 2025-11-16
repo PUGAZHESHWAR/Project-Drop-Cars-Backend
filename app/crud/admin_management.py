@@ -196,6 +196,88 @@ def get_vehicle_owner_drivers(db: Session, vehicle_owner_id: str) -> List[CarDri
         CarDriver.vehicle_owner_id == vehicle_owner_id
     ).all()
 
+def get_all_cars_unified(
+    db: Session,
+    skip: int = 0,
+    limit: int = 100,
+    vehicle_owner_id: Optional[str] = None,
+    status_filter: Optional[str] = None,
+    car_type_filter: Optional[str] = None
+) -> Tuple[List[dict], int, int, int, int, int]:
+    """
+    Get all cars with filtering and pagination.
+    
+    Args:
+        db: Database session
+        skip: Number of records to skip
+        limit: Maximum number of records to return
+        vehicle_owner_id: Filter by vehicle owner ID (optional)
+        status_filter: Filter by car status (ONLINE, DRIVING, BLOCKED, PROCESSING)
+        car_type_filter: Filter by car type
+    
+    Returns:
+        Tuple of (cars list, total_count, online_count, blocked_count, processing_count, driving_count)
+    """
+    from app.utils.gcs import generate_signed_url_from_gcs
+    
+    # Build query
+    query = db.query(CarDetails)
+    
+    # Apply filters
+    if vehicle_owner_id:
+        query = query.filter(CarDetails.vehicle_owner_id == str(vehicle_owner_id))
+    
+    if status_filter:
+        status_filter_upper = status_filter.upper()
+        if status_filter_upper in ["ONLINE", "DRIVING", "BLOCKED", "PROCESSING"]:
+            query = query.filter(CarDetails.car_status == CarStatusEnum[status_filter_upper])
+    
+    if car_type_filter:
+        from app.models.car_details import CarTypeEnum
+        try:
+            query = query.filter(CarDetails.car_type == CarTypeEnum[car_type_filter.upper()])
+        except KeyError:
+            pass  # Invalid car type, ignore filter
+    
+    # Get total count before pagination
+    total_count = query.count()
+    
+    # Apply pagination
+    cars = query.offset(skip).limit(limit).all()
+    
+    # Get vehicle owner names
+    car_list = []
+    for car in cars:
+        # Get vehicle owner name
+        owner_details = db.query(VehicleOwnerDetails).filter(
+            VehicleOwnerDetails.vehicle_owner_id == car.vehicle_owner_id
+        ).first()
+        owner_name = owner_details.full_name if owner_details else None
+        
+        car_list.append({
+            "id": car.id,
+            "vehicle_owner_id": car.vehicle_owner_id,
+            "car_name": car.car_name,
+            "car_type": car.car_type.value,
+            "car_number": car.car_number,
+            "year_of_the_car": car.year_of_the_car,
+            "car_status": car.car_status.value,
+            "vehicle_owner_name": owner_name,
+            "created_at": car.created_at
+        })
+    
+    # Calculate status counts
+    all_cars_query = db.query(CarDetails)
+    if vehicle_owner_id:
+        all_cars_query = all_cars_query.filter(CarDetails.vehicle_owner_id == str(vehicle_owner_id))
+    
+    online_count = all_cars_query.filter(CarDetails.car_status == CarStatusEnum.ONLINE).count()
+    blocked_count = all_cars_query.filter(CarDetails.car_status == CarStatusEnum.BLOCKED).count()
+    processing_count = all_cars_query.filter(CarDetails.car_status == CarStatusEnum.PROCESSING).count()
+    driving_count = all_cars_query.filter(CarDetails.car_status == CarStatusEnum.DRIVING).count()
+    
+    return car_list, total_count, online_count, blocked_count, processing_count, driving_count
+
 # ============ CAR MANAGEMENT ============
 
 def update_car_account_status(db: Session, car_id: str, car_status: str) -> CarDetails:
@@ -556,7 +638,9 @@ def get_all_account_documents(db: Session, account_id: str, account_type: str) -
     """
     from app.utils.gcs import generate_signed_url_from_gcs
     
-    account_type_lower = account_type.lower()
+    # Ensure account_id is a string
+    account_id = str(account_id)
+    account_type_lower = str(account_type).lower()
     account_documents = []
     car_documents = []
     
@@ -651,9 +735,12 @@ def get_all_account_documents(db: Session, account_id: str, account_type: str) -
         driver = db.query(CarDriver).filter(CarDriver.id == account_id).first()
         account_name = driver.full_name if driver else ""
     
+    # Normalize account type
+    normalized_account_type = str(account_type_lower).replace("s", "").replace("owner", "_owner")
+    
     return {
-        "account_id": account_id,
-        "account_type": account_type_lower.replace("s", "").replace("owner", "_owner"),
+        "account_id": str(account_id),
+        "account_type": normalized_account_type,
         "account_name": account_name,
         "account_documents": account_documents,
         "car_documents": car_documents,
@@ -673,7 +760,7 @@ def update_document_status_by_id(db: Session, account_id: str, account_type: str
     
     Args:
         db: Database session
-        account_id: Account ID (for account documents)
+        account_id: Account ID (for account documents, can be UUID object or string)
         account_type: Account type (for account documents)
         document_id: Document identifier
         new_status: New status ("PENDING", "VERIFIED", "INVALID")
@@ -681,6 +768,12 @@ def update_document_status_by_id(db: Session, account_id: str, account_type: str
     Returns:
         Dictionary with update result
     """
+    # Ensure account_id is a string
+    account_id = str(account_id)
+    account_type = str(account_type)
+    document_id = str(document_id)
+    new_status = str(new_status)
+    
     try:
         doc_status = DocumentStatusEnum[new_status.upper()]
     except KeyError:
@@ -752,14 +845,16 @@ def update_unified_account_status(db: Session, account_id: str, account_type: st
     
     Args:
         db: Database session
-        account_id: Account ID
+        account_id: Account ID (can be UUID object or string)
         account_type: Account type ("vendor", "vehicle_owner", "driver", "quickdriver")
         new_status: New status ("Active", "Inactive", "Pending" for vendors/owners, or driver statuses)
     
     Returns:
         Dictionary with update result
     """
-    account_type_lower = account_type.lower()
+    # Ensure account_id is a string
+    account_id = str(account_id)
+    account_type_lower = str(account_type).lower()
     
     if account_type_lower in ["vendor", "vendors"]:
         updated_vendor = update_vendor_account_status(db, account_id, new_status)
@@ -799,7 +894,7 @@ def update_account_document_status(db: Session, account_id: str, account_type: s
     
     Args:
         db: Database session
-        account_id: Account ID
+        account_id: Account ID (can be UUID object or string)
         account_type: Account type
         document_type: "aadhar" or "licence"
         new_status: New status
@@ -807,6 +902,12 @@ def update_account_document_status(db: Session, account_id: str, account_type: s
     Returns:
         Dictionary with update result
     """
+    # Ensure all parameters are strings
+    account_id = str(account_id)
+    account_type = str(account_type)
+    document_type = str(document_type)
+    new_status = str(new_status)
+    
     try:
         doc_status = DocumentStatusEnum[new_status.upper()]
     except KeyError:

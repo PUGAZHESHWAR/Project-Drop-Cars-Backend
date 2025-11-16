@@ -296,3 +296,29 @@ class DocumentStatusUpdateResponse(BaseModel):
     
     class Config:
         from_attributes = True
+
+# ============ CAR LIST SCHEMAS ============
+
+class CarListItem(BaseModel):
+    """Car list item with basic info"""
+    id: UUID
+    vehicle_owner_id: UUID
+    car_name: str
+    car_type: str
+    car_number: str
+    year_of_the_car: Optional[str] = None
+    car_status: str  # ONLINE, DRIVING, BLOCKED, PROCESSING
+    vehicle_owner_name: Optional[str] = None
+    created_at: datetime
+    
+    class Config:
+        from_attributes = True
+
+class CarListResponse(BaseModel):
+    """Response schema for car list"""
+    cars: List[CarListItem]
+    total_count: int
+    online_count: int
+    blocked_count: int
+    processing_count: int
+    driving_count: int
