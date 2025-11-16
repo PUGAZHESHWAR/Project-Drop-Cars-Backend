@@ -189,3 +189,110 @@ class VehicleOwnerWithAssetsResponse(BaseModel):
     vehicle_owner: VehicleOwnerFullDetailsResponse
     cars: List[CarListItem]
     drivers: List[DriverListItem]
+
+# ============ UNIFIED ACCOUNT MANAGEMENT SCHEMAS ============
+
+class AccountListItem(BaseModel):
+    """Unified account list item with basic info"""
+    id: UUID
+    name: str
+    account_type: str  # "vendor", "vehicle_owner", "driver", "quickdriver"
+    account_status: str  # "Active", "Inactive", "Pending", "ONLINE", "OFFLINE", etc.
+    
+    class Config:
+        from_attributes = True
+
+class AccountListResponse(BaseModel):
+    """Response schema for unified account list"""
+    accounts: List[AccountListItem]
+    total_count: int
+    active_count: int
+    inactive_count: int
+
+class AccountFullDetailsResponse(BaseModel):
+    """Unified response for full account details"""
+    id: UUID
+    account_type: str
+    account_status: str
+    # Vendor specific fields
+    vendor_id: Optional[UUID] = None
+    full_name: Optional[str] = None
+    primary_number: Optional[str] = None
+    secondary_number: Optional[str] = None
+    gpay_number: Optional[str] = None
+    wallet_balance: Optional[int] = None
+    bank_balance: Optional[int] = None
+    aadhar_number: Optional[str] = None
+    aadhar_front_img: Optional[str] = None
+    aadhar_status: Optional[str] = None
+    address: Optional[str] = None
+    city: Optional[str] = None
+    pincode: Optional[str] = None
+    # Vehicle Owner specific fields
+    vehicle_owner_id: Optional[UUID] = None
+    # Driver specific fields
+    licence_number: Optional[str] = None
+    licence_front_img: Optional[str] = None
+    licence_front_status: Optional[str] = None
+    # Common
+    created_at: datetime
+    documents: Optional[Dict[str, VendorDocumentInfo]] = None
+    
+    class Config:
+        from_attributes = True
+
+# ============ DOCUMENT VERIFICATION SCHEMAS ============
+
+class DocumentItem(BaseModel):
+    """Individual document item"""
+    document_id: str  # Unique identifier: "account_aadhar", "car_1_rc_front", etc.
+    document_type: str  # "aadhar", "licence", "rc_front", "rc_back", "insurance", "fc", "car_img", "permit"
+    document_name: str  # Display name: "Aadhar Card", "RC Front", etc.
+    image_url: Optional[str] = None
+    status: str  # "PENDING", "VERIFIED", "INVALID"
+    uploaded_at: Optional[datetime] = None
+    # For car documents
+    car_id: Optional[UUID] = None
+    car_name: Optional[str] = None
+    car_number: Optional[str] = None
+    
+    class Config:
+        from_attributes = True
+
+class AccountDocumentsResponse(BaseModel):
+    """Response with all documents for an account"""
+    account_id: UUID
+    account_type: str
+    account_name: str
+    account_documents: List[DocumentItem]  # Account-level documents (aadhar/license)
+    car_documents: List[DocumentItem] = []  # Car documents (if vehicle owner)
+    total_documents: int
+    pending_count: int
+    verified_count: int
+    invalid_count: int
+    
+    class Config:
+        from_attributes = True
+
+class UpdateDocumentStatusRequest(BaseModel):
+    """Request to update a single document status"""
+    document_id: str  # e.g., "account_aadhar", "car_1_rc_front"
+    status: str  # "PENDING", "VERIFIED", "INVALID"
+    
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "document_id": "account_aadhar",
+                "status": "VERIFIED"
+            }
+        }
+
+class DocumentStatusUpdateResponse(BaseModel):
+    """Response after updating document status"""
+    message: str
+    document_id: str
+    document_type: str
+    new_status: str
+    
+    class Config:
+        from_attributes = True

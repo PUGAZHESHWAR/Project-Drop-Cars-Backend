@@ -20,3 +20,6 @@ WHERE enumtypid = (SELECT oid FROM pg_type WHERE typname = 'CAR_TYPE_ENUM')
 ORDER BY enumsortorder;
 
 
+
+
+

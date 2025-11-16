@@ -20,3 +20,6 @@ ALTER TYPE "CAR_TYPE_ENUM" ADD VALUE IF NOT EXISTS 'INNOVA_CRYSTA_7_PLUS_1';
 -- 2. Then use the alternative approach in migration_update_car_type_enum.sql to recreate the enum
 
 
+
+
+

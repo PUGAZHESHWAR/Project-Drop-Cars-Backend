@@ -9,12 +9,16 @@ from app.crud.admin_management import (
     get_all_vendors, get_vendor_full_details, update_vendor_account_status, update_vendor_document_status,
     get_all_vehicle_owners, get_vehicle_owner_full_details, update_vehicle_owner_account_status,
     update_vehicle_owner_document_status, get_vehicle_owner_cars, get_vehicle_owner_drivers,
-    update_car_account_status, update_car_document_status, update_driver_account_status, update_driver_document_status
+    update_car_account_status, update_car_document_status, update_driver_account_status, update_driver_document_status,
+    get_all_accounts_unified, get_account_details_by_id,
+    get_all_account_documents, update_document_status_by_id
 )
 from app.schemas.admin_management import (
     VendorListOut, VendorFullDetailsResponse, VehicleOwnerListOut, VehicleOwnerFullDetailsResponse,
     UpdateAccountStatusRequest, UpdateDocumentStatusRequest, StatusUpdateResponse,
-    CarListResponse, DriverListResponse, VehicleOwnerWithAssetsResponse
+    CarListResponse, DriverListResponse, VehicleOwnerWithAssetsResponse,
+    AccountListResponse, AccountListItem, AccountFullDetailsResponse,
+    AccountDocumentsResponse, DocumentItem, DocumentStatusUpdateResponse
 )
 from app.core.security import create_access_token, get_current_admin
 from app.database.session import get_db
@@ -243,6 +247,168 @@ async def list_admins(
         
         return admins
         
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Internal server error: {str(e)}"
+        )
+
+# ============ UNIFIED ACCOUNT MANAGEMENT ENDPOINTS ============
+# NOTE: These routes must come BEFORE /admin/{admin_id} to avoid route conflicts
+
+@router.get("/admin/accounts", response_model=AccountListResponse)
+async def list_all_accounts(
+    skip: int = Query(0, ge=0, description="Number of records to skip"),
+    limit: int = Query(100, ge=1, le=1000, description="Number of records to return"),
+    account_type: Optional[str] = Query(None, description="Filter by account type: vendor, vehicle_owner, driver, quickdriver"),
+    status_filter: Optional[str] = Query(None, description="Filter by status: active, inactive, pending, ONLINE, OFFLINE, etc."),
+    current_admin = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    """
+    Get All Accounts (Admin Only)
+    
+    Returns a unified list of all accounts (vendors, vehicle owners, drivers) with basic information:
+    - ID
+    - Name
+    - Account Type (vendor, vehicle_owner, driver)
+    - Account Status (Active, Inactive, Pending, ONLINE, OFFLINE, etc.)
+    
+    Supports filtering by:
+    - account_type: Filter by specific account type
+    - status_filter: Filter by status (active, inactive, pending, or specific statuses)
+    
+    Requires admin authentication.
+    
+    Returns:
+        - List of accounts with basic info
+        - Total count
+        - Active count
+        - Inactive count
+    """
+    try:
+        accounts, total_count, active_count, inactive_count = get_all_accounts_unified(
+            db=db,
+            skip=skip,
+            limit=limit,
+            account_type=account_type,
+            status_filter=status_filter
+        )
+        
+        account_items = [
+            AccountListItem(
+                id=acc["id"],
+                name=acc["name"],
+                account_type=acc["account_type"],
+                account_status=acc["account_status"]
+            )
+            for acc in accounts
+        ]
+        
+        return AccountListResponse(
+            accounts=account_items,
+            total_count=total_count,
+            active_count=active_count,
+            inactive_count=inactive_count
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Internal server error: {str(e)}"
+        )
+
+
+@router.get("/admin/accounts/{account_id}", response_model=AccountFullDetailsResponse)
+async def get_account_details(
+    account_id: UUID,
+    account_type: str = Query(..., description="Account type: vendor, vehicle_owner, driver, or quickdriver"),
+    current_admin = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    """
+    Get Account Full Details by ID (Admin Only)
+    
+    Returns complete details of a specific account based on ID and account type.
+    
+    Account types supported:
+    - vendor: Returns vendor full details
+    - vehicle_owner: Returns vehicle owner full details
+    - driver or quickdriver: Returns driver full details
+    
+    Requires admin authentication.
+    
+    Returns:
+        - Complete account details including all profile information
+        - Document status
+        - Account status
+    """
+    try:
+        account_details = get_account_details_by_id(db, str(account_id), account_type)
+        
+        if not account_details:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Account not found with ID {account_id} and type {account_type}"
+            )
+        
+        # Prepare documents if available
+        documents = None
+        if account_details.get("aadhar_front_img"):
+            from app.schemas.admin_management import VendorDocumentInfo
+            documents = {
+                "aadhar": VendorDocumentInfo(
+                    document_type="aadhar",
+                    status=account_details.get("aadhar_status"),
+                    image_url=generate_signed_url_from_gcs(account_details.get("aadhar_front_img")) if account_details.get("aadhar_front_img") else None
+                )
+            }
+        elif account_details.get("licence_front_img"):
+            from app.schemas.admin_management import VendorDocumentInfo
+            documents = {
+                "licence": VendorDocumentInfo(
+                    document_type="licence",
+                    status=account_details.get("licence_front_status"),
+                    image_url=generate_signed_url_from_gcs(account_details.get("licence_front_img")) if account_details.get("licence_front_img") else None
+                )
+            }
+        
+        # Generate signed URLs for images if they exist
+        aadhar_img_url = None
+        if account_details.get("aadhar_front_img"):
+            aadhar_img_url = generate_signed_url_from_gcs(account_details.get("aadhar_front_img"))
+        
+        licence_img_url = None
+        if account_details.get("licence_front_img"):
+            licence_img_url = generate_signed_url_from_gcs(account_details.get("licence_front_img"))
+        
+        return AccountFullDetailsResponse(
+            id=account_details["id"],
+            account_type=account_details["account_type"],
+            account_status=account_details["account_status"],
+            vendor_id=account_details.get("vendor_id"),
+            vehicle_owner_id=account_details.get("vehicle_owner_id"),
+            full_name=account_details.get("full_name"),
+            primary_number=account_details.get("primary_number"),
+            secondary_number=account_details.get("secondary_number"),
+            gpay_number=account_details.get("gpay_number"),
+            wallet_balance=account_details.get("wallet_balance"),
+            bank_balance=account_details.get("bank_balance"),
+            aadhar_number=account_details.get("aadhar_number"),
+            aadhar_front_img=aadhar_img_url,
+            aadhar_status=account_details.get("aadhar_status"),
+            address=account_details.get("address"),
+            city=account_details.get("city"),
+            pincode=account_details.get("pincode"),
+            licence_number=account_details.get("licence_number"),
+            licence_front_img=licence_img_url,
+            licence_front_status=account_details.get("licence_front_status"),
+            created_at=account_details.get("created_at"),
+            documents=documents
+        )
     except HTTPException:
         raise
     except Exception as e:
@@ -981,3 +1147,126 @@ async def update_driver_document_status_route(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Internal server error: {str(e)}"
         )
+
+# ============ DOCUMENT VERIFICATION ENDPOINTS ============
+
+@router.get("/admin/accounts/{account_id}/documents", response_model=AccountDocumentsResponse)
+async def get_account_documents(
+    account_id: UUID,
+    account_type: str = Query(..., description="Account type: vendor, vehicle_owner, driver, or quickdriver"),
+    current_admin = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    """
+    Get All Documents for an Account (Admin Only)
+    
+    Returns all documents uploaded by an account:
+    - Account documents (Aadhar for vendors/vehicle owners, License for drivers)
+    - Car documents (if vehicle owner: RC front/back, Insurance, FC, Car Image, Permit)
+    
+    Each document includes:
+    - Document ID (for updating status)
+    - Document type and name
+    - Image URL (signed URL)
+    - Current status (PENDING, VERIFIED, INVALID)
+    - Upload date
+    - Car information (for car documents)
+    
+    Requires admin authentication.
+    
+    Returns:
+        - All account documents
+        - All car documents (if vehicle owner)
+        - Document counts (total, pending, verified, invalid)
+    """
+    try:
+        documents_data = get_all_account_documents(db, str(account_id), account_type)
+        
+        if not documents_data:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Account not found with ID {account_id} and type {account_type}"
+            )
+        
+        # Convert to DocumentItem objects
+        account_docs = [
+            DocumentItem(**doc) for doc in documents_data["account_documents"]
+        ]
+        car_docs = [
+            DocumentItem(**doc) for doc in documents_data["car_documents"]
+        ]
+        
+        return AccountDocumentsResponse(
+            account_id=UUID(documents_data["account_id"]),
+            account_type=documents_data["account_type"],
+            account_name=documents_data["account_name"],
+            account_documents=account_docs,
+            car_documents=car_docs,
+            total_documents=documents_data["total_documents"],
+            pending_count=documents_data["pending_count"],
+            verified_count=documents_data["verified_count"],
+            invalid_count=documents_data["invalid_count"]
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Internal server error: {str(e)}"
+        )
+
+
+@router.patch("/admin/accounts/{account_id}/documents/{document_id}/status", response_model=DocumentStatusUpdateResponse)
+async def update_document_status(
+    account_id: UUID,
+    document_id: str,
+    account_type: str = Query(..., description="Account type: vendor, vehicle_owner, driver, or quickdriver"),
+    status: str = Query(..., description="New status: PENDING, VERIFIED, or INVALID"),
+    current_admin = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    """
+    Update Document Status (Admin Only)
+    
+    Updates the verification status of a specific document.
+    
+    Document ID formats:
+    - Account documents: "account_aadhar", "account_licence"
+    - Car documents: "car_{car_id}_{doc_type}" (e.g., "car_123_rc_front")
+    
+    Valid statuses:
+    - PENDING: Document is pending verification
+    - VERIFIED: Document is verified and accepted
+    - INVALID: Document is invalid/rejected
+    
+    Requires admin authentication.
+    
+    Returns:
+        - Success message
+        - Document ID
+        - Document type
+        - New status
+    """
+    try:
+        result = update_document_status_by_id(
+            db=db,
+            account_id=str(account_id),
+            account_type=account_type,
+            document_id=document_id,
+            new_status=status
+        )
+        
+        return DocumentStatusUpdateResponse(
+            message=result["message"],
+            document_id=result["document_id"],
+            document_type=result["document_type"],
+            new_status=result["new_status"]
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Internal server error: {str(e)}"
+        )
+
