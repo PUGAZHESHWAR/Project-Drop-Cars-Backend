@@ -1400,6 +1400,7 @@ async def update_account_status_unified(
     account_id: UUID,
     account_type: str = Query(..., description="Account type: vendor, vehicle_owner, driver, or quickdriver"),
     status_param: Optional[str] = Query(None, alias="status", description="New status (can also be sent in body)"),
+    status_param: Optional[str] = Query(None, alias="status", description="New status (can also be sent in body)"),
     status_update: Optional[UpdateAccountStatusRequest] = None,
     current_admin = Depends(get_current_admin),
     db: Session = Depends(get_db)
@@ -1436,6 +1437,8 @@ async def update_account_status_unified(
         # Get status from query parameter or request body
         if status_param:
             new_status = status_param
+        if status_param:
+            new_status = status_param
         elif status_update and status_update.account_status:
             new_status = status_update.account_status
         else:
@@ -1452,12 +1455,18 @@ async def update_account_status_unified(
         )
         
         # Convert id to UUID if it's a string, otherwise use as-is (it might already be a UUID)
+        # Convert id to UUID if it's a string, otherwise use as-is (it might already be a UUID)
         result_id = result["id"]
         if isinstance(result_id, UUID):
             # Already a UUID, use it directly
             pass
         elif isinstance(result_id, str):
+        if isinstance(result_id, UUID):
+            # Already a UUID, use it directly
+            pass
+        elif isinstance(result_id, str):
             result_id = UUID(result_id)
+        else:
         else:
             result_id = UUID(str(result_id))
         
