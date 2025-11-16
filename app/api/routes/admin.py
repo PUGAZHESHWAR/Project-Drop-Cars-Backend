@@ -260,6 +260,81 @@ async def list_admins(
 # ============ UNIFIED ACCOUNT MANAGEMENT ENDPOINTS ============
 # NOTE: These routes must come BEFORE /admin/{admin_id} to avoid route conflicts
 
+@router.get("/admin/cars", response_model=CarListResponse)
+async def list_all_cars(
+    skip: int = Query(0, ge=0, description="Number of records to skip"),
+    limit: int = Query(100, ge=1, le=1000, description="Number of records to return"),
+    vehicle_owner_id: Optional[str] = Query(None, description="Filter by vehicle owner ID"),
+    status_filter: Optional[str] = Query(None, description="Filter by car status: ONLINE, DRIVING, BLOCKED, PROCESSING"),
+    car_type_filter: Optional[str] = Query(None, description="Filter by car type"),
+    current_admin = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    """
+    Get All Cars (Admin Only)
+    
+    Returns a list of all cars in the system with basic information:
+    - ID
+    - Car Name
+    - Car Type
+    - Car Number
+    - Car Status (ONLINE, DRIVING, BLOCKED, PROCESSING)
+    - Vehicle Owner ID and Name
+    - Year of the Car
+    
+    Supports filtering by:
+    - vehicle_owner_id: Filter by specific vehicle owner
+    - status_filter: Filter by car status
+    - car_type_filter: Filter by car type
+    
+    Requires admin authentication.
+    
+    Returns:
+        - List of cars with basic info
+        - Total count
+        - Status counts (online, blocked, processing, driving)
+    """
+    try:
+        cars, total_count, online_count, blocked_count, processing_count, driving_count = get_all_cars_unified(
+            db=db,
+            skip=skip,
+            limit=limit,
+            vehicle_owner_id=vehicle_owner_id,
+            status_filter=status_filter,
+            car_type_filter=car_type_filter
+        )
+        
+        car_items = [
+            CarListItem(
+                id=car["id"],
+                vehicle_owner_id=car["vehicle_owner_id"],
+                car_name=car["car_name"],
+                car_type=car["car_type"],
+                car_number=car["car_number"],
+                year_of_the_car=car["year_of_the_car"],
+                car_status=car["car_status"],
+                vehicle_owner_name=car["vehicle_owner_name"],
+                created_at=car["created_at"]
+            )
+            for car in cars
+        ]
+        
+        return CarListResponse(
+            cars=car_items,
+            total_count=total_count,
+            online_count=online_count,
+            blocked_count=blocked_count,
+            processing_count=processing_count,
+            driving_count=driving_count
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Internal server error: {str(e)}"
+        )
+
 @router.get("/admin/accounts", response_model=AccountListResponse)
 async def list_all_accounts(
     skip: int = Query(0, ge=0, description="Number of records to skip"),
@@ -980,82 +1055,6 @@ async def update_vehicle_owner_document_status_route(
 
 
 # ============ CAR MANAGEMENT ENDPOINTS ============
-# NOTE: /admin/cars route must come BEFORE /admin/cars/{car_id} routes
-
-@router.get("/admin/cars", response_model=CarListResponse)
-async def list_all_cars(
-    skip: int = Query(0, ge=0, description="Number of records to skip"),
-    limit: int = Query(100, ge=1, le=1000, description="Number of records to return"),
-    vehicle_owner_id: Optional[str] = Query(None, description="Filter by vehicle owner ID"),
-    status_filter: Optional[str] = Query(None, description="Filter by car status: ONLINE, DRIVING, BLOCKED, PROCESSING"),
-    car_type_filter: Optional[str] = Query(None, description="Filter by car type"),
-    current_admin = Depends(get_current_admin),
-    db: Session = Depends(get_db)
-):
-    """
-    Get All Cars (Admin Only)
-    
-    Returns a list of all cars in the system with basic information:
-    - ID
-    - Car Name
-    - Car Type
-    - Car Number
-    - Car Status (ONLINE, DRIVING, BLOCKED, PROCESSING)
-    - Vehicle Owner ID and Name
-    - Year of the Car
-    
-    Supports filtering by:
-    - vehicle_owner_id: Filter by specific vehicle owner
-    - status_filter: Filter by car status
-    - car_type_filter: Filter by car type
-    
-    Requires admin authentication.
-    
-    Returns:
-        - List of cars with basic info
-        - Total count
-        - Status counts (online, blocked, processing, driving)
-    """
-    try:
-        cars, total_count, online_count, blocked_count, processing_count, driving_count = get_all_cars_unified(
-            db=db,
-            skip=skip,
-            limit=limit,
-            vehicle_owner_id=vehicle_owner_id,
-            status_filter=status_filter,
-            car_type_filter=car_type_filter
-        )
-        
-        car_items = [
-            CarListItem(
-                id=car["id"],
-                vehicle_owner_id=car["vehicle_owner_id"],
-                car_name=car["car_name"],
-                car_type=car["car_type"],
-                car_number=car["car_number"],
-                year_of_the_car=car["year_of_the_car"],
-                car_status=car["car_status"],
-                vehicle_owner_name=car["vehicle_owner_name"],
-                created_at=car["created_at"]
-            )
-            for car in cars
-        ]
-        
-        return CarListResponse(
-            cars=car_items,
-            total_count=total_count,
-            online_count=online_count,
-            blocked_count=blocked_count,
-            processing_count=processing_count,
-            driving_count=driving_count
-        )
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Internal server error: {str(e)}"
-        )
 
 @router.patch("/admin/cars/{car_id}/account-status", response_model=StatusUpdateResponse)
 async def update_car_account_status_route(
@@ -1354,7 +1353,7 @@ async def update_document_status(
 async def update_account_status_unified(
     account_id: UUID,
     account_type: str = Query(..., description="Account type: vendor, vehicle_owner, driver, or quickdriver"),
-    status: Optional[str] = Query(None, description="New status (can also be sent in body)"),
+    status_param: Optional[str] = Query(None, alias="status", description="New status (can also be sent in body)"),
     status_update: Optional[UpdateAccountStatusRequest] = None,
     current_admin = Depends(get_current_admin),
     db: Session = Depends(get_db)
@@ -1389,8 +1388,8 @@ async def update_account_status_unified(
     """
     try:
         # Get status from query parameter or request body
-        if status:
-            new_status = status
+        if status_param:
+            new_status = status_param
         elif status_update and status_update.account_status:
             new_status = status_update.account_status
         else:
@@ -1406,11 +1405,14 @@ async def update_account_status_unified(
             new_status=new_status
         )
         
-        # Convert id to UUID if it's a string, otherwise use as-is
+        # Convert id to UUID if it's a string, otherwise use as-is (it might already be a UUID)
         result_id = result["id"]
-        if isinstance(result_id, str):
+        if isinstance(result_id, UUID):
+            # Already a UUID, use it directly
+            pass
+        elif isinstance(result_id, str):
             result_id = UUID(result_id)
-        elif not isinstance(result_id, UUID):
+        else:
             result_id = UUID(str(result_id))
         
         return StatusUpdateResponse(
