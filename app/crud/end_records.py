@@ -9,6 +9,7 @@ from app.models.hourly_rental import HourlyRental
 from app.models.car_driver import CarDriver, AccountStatusEnum
 from app.models.vendor_details import VendorDetails
 from app.models.orders import OrderTypeEnum
+import math
 from app.crud.notification import send_trip_status_notification_to_vendor_and_vehicle_owner
 async def create_start_trip_record(
     db: Session,
@@ -229,19 +230,22 @@ async def update_end_trip_record(
         hill_charges = new_order.hill_charges
         toll_charges = order.updated_toll_charges if order.updated_toll_charges else new_order.toll_charges
         updated_km = total_km
-
-        closed_vendor_price = ((cost_per_km+extra_cost_per_km)*updated_km) + (driver_allowance+extra_driver_allowance) + (permit_charges+extra_permit_charges) + (hill_charges) + (toll_charges)
-        closed_driver_price = ((cost_per_km)*updated_km) + (driver_allowance) + (permit_charges) + (hill_charges) + (toll_charges)
-        commision_amount = 10
-        vendor_amount_to_receive_from_driver = closed_vendor_price - closed_driver_price + ((cost_per_km*updated_km)*(commision_amount/100))
-        vendor_profit = vendor_amount_to_receive_from_driver - (vendor_amount_to_receive_from_driver*(commision_amount/100))
-        admin_profit = vendor_amount_to_receive_from_driver*(commision_amount/100)
+        night_charges = order.night_charges if order.night_charges > 0 else 0
+        print("Total Km is ",total_km)
+        closed_vendor_price = ((cost_per_km+extra_cost_per_km)*updated_km) + (driver_allowance+extra_driver_allowance) + (permit_charges+extra_permit_charges) + (hill_charges) + (toll_charges) + (night_charges) + (waiting_time if waiting_time is not None and order.trip_type == OrderTypeEnum.MULTY_CITY else 0)
+        closed_driver_price = ((cost_per_km)*updated_km) + (driver_allowance) + (permit_charges) + (hill_charges) + (toll_charges) + (night_charges) + (waiting_time if waiting_time is not None and order.trip_type == OrderTypeEnum.MULTY_CITY else 0)
+        commision_amount = order.platform_fees_percent
+        vendor_commision_env = order.vendor_fees_percent
+        print(waiting_time)
+        vendor_amount_to_receive_from_driver = math.ceil(closed_vendor_price - closed_driver_price + ((cost_per_km*updated_km)*(vendor_commision_env/100)))
+        vendor_profit = (vendor_amount_to_receive_from_driver - math.ceil(vendor_amount_to_receive_from_driver*(commision_amount/100)))
+        admin_profit = math.ceil(vendor_amount_to_receive_from_driver*(commision_amount/100))
         driver_profit = closed_vendor_price - vendor_amount_to_receive_from_driver
 
         #New Custom Verification
         # For non-hourly, keep existing behavior but set profits coherently
-        print("Calculated fare", calculated_fare)
-        print("Estimated price", order.estimated_price)
+        print("Calculated fare", closed_vendor_price)
+        print("Estimated price", closed_driver_price)
         # print()
         order.closed_vendor_price = closed_vendor_price
         order.vendor_profit = vendor_profit
