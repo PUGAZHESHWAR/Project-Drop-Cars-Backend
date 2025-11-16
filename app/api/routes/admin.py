@@ -1406,9 +1406,16 @@ async def update_account_status_unified(
             new_status=new_status
         )
         
+        # Convert id to UUID if it's a string, otherwise use as-is
+        result_id = result["id"]
+        if isinstance(result_id, str):
+            result_id = UUID(result_id)
+        elif not isinstance(result_id, UUID):
+            result_id = UUID(str(result_id))
+        
         return StatusUpdateResponse(
             message=result["message"],
-            id=UUID(result["id"]),
+            id=result_id,
             new_status=result["new_status"]
         )
     except HTTPException:
