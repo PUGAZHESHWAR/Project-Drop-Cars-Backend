@@ -11,7 +11,7 @@ from app.crud.admin_management import (
     update_vehicle_owner_document_status, get_vehicle_owner_cars, get_vehicle_owner_drivers,
     update_car_account_status, update_car_document_status, update_driver_account_status, update_driver_document_status,
     get_all_accounts_unified, get_account_details_by_id,
-    get_all_account_documents, update_document_status_by_id
+    get_all_account_documents, update_document_status_by_id, update_unified_account_status
 )
 from app.schemas.admin_management import (
     VendorListOut, VendorFullDetailsResponse, VehicleOwnerListOut, VehicleOwnerFullDetailsResponse,
@@ -1260,6 +1260,61 @@ async def update_document_status(
             message=result["message"],
             document_id=result["document_id"],
             document_type=result["document_type"],
+            new_status=result["new_status"]
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Internal server error: {str(e)}"
+        )
+
+# ============ UNIFIED ACCOUNT STATUS UPDATE ============
+
+@router.patch("/admin/accounts/{account_id}/status", response_model=StatusUpdateResponse)
+async def update_account_status_unified(
+    account_id: UUID,
+    account_type: str = Query(..., description="Account type: vendor, vehicle_owner, driver, or quickdriver"),
+    status_update: UpdateAccountStatusRequest = ...,
+    current_admin = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    """
+    Update Account Status (Admin Only) - Unified Endpoint
+    
+    Updates the account status for any account type (vendor, vehicle owner, or driver).
+    
+    Valid statuses for Vendors & Vehicle Owners:
+    - Active: Account is active and can use the system
+    - Inactive: Account is inactive and cannot use the system
+    - Pending: Account is pending approval
+    
+    Valid statuses for Drivers:
+    - ONLINE: Driver is online and available
+    - OFFLINE: Driver is offline
+    - DRIVING: Driver is currently on a trip
+    - BLOCKED: Driver is blocked
+    - PROCESSING: Driver account is being processed
+    
+    Requires admin authentication.
+    
+    Returns:
+        - Success message
+        - Account ID
+        - New account status
+    """
+    try:
+        result = update_unified_account_status(
+            db=db,
+            account_id=str(account_id),
+            account_type=account_type,
+            new_status=status_update.account_status
+        )
+        
+        return StatusUpdateResponse(
+            message=result["message"],
+            id=UUID(result["id"]),
             new_status=result["new_status"]
         )
     except HTTPException:

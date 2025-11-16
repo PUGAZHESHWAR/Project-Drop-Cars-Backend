@@ -746,6 +746,53 @@ def update_document_status_by_id(db: Session, account_id: str, account_type: str
         detail="Invalid document ID format"
     )
 
+def update_unified_account_status(db: Session, account_id: str, account_type: str, new_status: str) -> dict:
+    """
+    Update account status for any account type (unified).
+    
+    Args:
+        db: Database session
+        account_id: Account ID
+        account_type: Account type ("vendor", "vehicle_owner", "driver", "quickdriver")
+        new_status: New status ("Active", "Inactive", "Pending" for vendors/owners, or driver statuses)
+    
+    Returns:
+        Dictionary with update result
+    """
+    account_type_lower = account_type.lower()
+    
+    if account_type_lower in ["vendor", "vendors"]:
+        updated_vendor = update_vendor_account_status(db, account_id, new_status)
+        return {
+            "message": "Vendor account status updated successfully",
+            "id": updated_vendor.id,
+            "account_type": "vendor",
+            "new_status": updated_vendor.account_status.value
+        }
+    
+    elif account_type_lower in ["vehicle_owner", "vehicle_owners", "vehicleowner"]:
+        updated_owner = update_vehicle_owner_account_status(db, account_id, new_status)
+        return {
+            "message": "Vehicle owner account status updated successfully",
+            "id": updated_owner.id,
+            "account_type": "vehicle_owner",
+            "new_status": updated_owner.account_status.value
+        }
+    
+    elif account_type_lower in ["driver", "drivers", "quickdriver", "quickdrivers"]:
+        updated_driver = update_driver_account_status(db, account_id, new_status)
+        return {
+            "message": "Driver account status updated successfully",
+            "id": updated_driver.id,
+            "account_type": "driver",
+            "new_status": updated_driver.driver_status.value
+        }
+    
+    raise HTTPException(
+        status_code=status.HTTP_400_BAD_REQUEST,
+        detail="Invalid account type"
+    )
+
 def update_account_document_status(db: Session, account_id: str, account_type: str, document_type: str, new_status: str) -> dict:
     """
     Update account document status (aadhar or licence).
