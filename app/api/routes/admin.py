@@ -1473,6 +1473,7 @@ async def update_account_status_unified(
         return StatusUpdateResponse(
             message=result["message"],
             id=result_id,
+            id=result_id,
             new_status=result["new_status"]
         )
     except HTTPException:
