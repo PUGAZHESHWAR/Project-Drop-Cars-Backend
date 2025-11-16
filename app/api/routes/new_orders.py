@@ -88,10 +88,11 @@ async def oneway_confirm(
             payload.hill_charges,
             payload.toll_charges,
             payload.extra_cost_per_km,
+            payload.night_charges,
             payload.trip_type
             
         )
-        
+        print(fare)
         # Persist order
         new_order, master_order_id = create_oneway_order(
             db,
@@ -118,6 +119,8 @@ async def oneway_confirm(
             max_time_to_assign_order=payload.max_time_to_assign_order,
             toll_charge_update=payload.toll_charge_update,
             night_charges=payload.night_charges if hasattr(payload, 'night_charges') else None,
+            estimated_cal_price = fare["driver_amount"],
+            vendor_cal_price = fare["customer_amount"]
         )
         print(fare)
 
@@ -200,6 +203,7 @@ async def roundtrip_confirm(
             payload.hill_charges,
             payload.toll_charges,
             payload.extra_cost_per_km,
+            payload.night_charges,
             payload.trip_type
             
         )
@@ -229,6 +233,8 @@ async def roundtrip_confirm(
             max_time_to_assign_order=payload.max_time_to_assign_order,
             toll_charge_update=payload.toll_charge_update,
             night_charges=payload.night_charges if hasattr(payload, 'night_charges') else None,
+            estimated_cal_price = fare["driver_amount"],
+            vendor_cal_price = fare["customer_amount"]
         )
 
         return OnewayConfirmResponse(
@@ -310,6 +316,7 @@ async def multicity_confirm(
             payload.hill_charges,
             payload.toll_charges,
             payload.extra_cost_per_km,
+            payload.night_charges,
             payload.trip_type
             
         )
@@ -339,6 +346,8 @@ async def multicity_confirm(
             max_time_to_assign_order=payload.max_time_to_assign_order,
             toll_charge_update=payload.toll_charge_update,
             night_charges=payload.night_charges if hasattr(payload, 'night_charges') else None,
+            estimated_cal_price = fare["driver_amount"],
+            vendor_cal_price = fare["customer_amount"]
         )
 
         return OnewayConfirmResponse(

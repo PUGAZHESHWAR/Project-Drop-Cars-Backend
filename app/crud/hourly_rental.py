@@ -4,7 +4,11 @@ from typing import Dict, Any
 
 from app.models.hourly_rental import HourlyRental
 from app.models.new_orders import OrderTypeEnum, CarTypeEnum
+import os
 
+
+admin_commession_env = int(os.getenv("ADMIN_COMMESSION_ENV"))
+vendor_commession_env = int(os.getenv("VENDOR_COMMESSION_ENV"))
 
 def calculate_hourly_fare(
     package_hours: Dict[str, int],

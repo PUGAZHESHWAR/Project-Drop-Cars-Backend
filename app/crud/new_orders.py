@@ -173,6 +173,8 @@ def create_oneway_order(
     max_time_to_assign_order: int = 15,
     toll_charge_update: bool = False,
     night_charges: int | None = None,
+    estimated_cal_price: int,
+    vendor_cal_price : int
 ) -> Tuple[NewOrder, int]:
     new_order = NewOrder(
         vendor_id=vendor_id,
@@ -193,11 +195,11 @@ def create_oneway_order(
         pickup_notes=pickup_notes,
         trip_distance = trip_distance,
         trip_time = trip_time,
-        platform_fees_percent = platform_fees_percent if platform_fees_percent is not None else (int(admin_commession_env) if admin_commession_env else 10),
+        platform_fees_percent = admin_commession_env,
         trip_status="PENDING",
-        estimated_price = (cost_per_km * trip_distance) + driver_allowance + hill_charges + permit_charges + toll_charges,
-        vendor_price = ((cost_per_km + extra_cost_per_km) * trip_distance) + (driver_allowance + extra_driver_allowance) + (permit_charges + extra_permit_charges) + hill_charges + toll_charges,
-        pick_near_city=pick_near_city,
+        pick_near_city = pick_near_city,
+        estimated_price = estimated_cal_price,
+        vendor_price = vendor_cal_price,
     )
     # print(cost_per_km,trip_distance,driver_allowance,hill_charges,permit_charges,toll_charges)
     db.add(new_order)
