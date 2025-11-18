@@ -22,6 +22,7 @@ from app.schemas.order_details import (
     OrderAssignmentDetail,
     EndRecordDetail
 )
+import math
 from app.utils.gcs import generate_signed_url_from_gcs
 
 
@@ -348,6 +349,9 @@ def get_vendor_order_details(db: Session, order_id: int, vendor_id: str) -> Opti
         extra_permit_charges=extra_permit_charges,
         hill_charges=hill_charges,
         toll_charges=toll_charges,
+        night_charges=int(order.night_charges) if order.night_charges and int(order.night_charges) > 0 else 0,
+        waiting_time = order.waiting_time if order.waiting_time else 0,
+        vendor_earns_estimation =  math.ceil(((new_order.extra_cost_per_km*order.trip_distance) + new_order.extra_driver_allowance + new_order.extra_permit_charges)+((new_order.cost_per_km*new_order.trip_distance)*order.vendor_fees_percent/100)) - math.ceil(math.ceil(((new_order.extra_cost_per_km*order.trip_distance) + new_order.extra_driver_allowance + new_order.extra_permit_charges)+((new_order.cost_per_km*new_order.trip_distance)*order.vendor_fees_percent/100))*order.platform_fees_percent/100) if order.source == "NEW_ORDERS" else 0,
         pickup_notes=pickup_notes,
         package_hours=package_hours,
         cost_per_hour=cost_per_hour,

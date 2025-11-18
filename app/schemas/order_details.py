@@ -182,6 +182,8 @@ class VendorOrderDetailResponse(BaseModel):
     extra_permit_charges: Optional[int] = None
     hill_charges: Optional[int] = None
     toll_charges: Optional[int] = None
+    night_charges: Optional[int] = None
+    waiting_time: Optional[int] = None
     pickup_notes: Optional[str] = None
 
     # Source-specific details for HOURLY_RENTAL
@@ -190,6 +192,7 @@ class VendorOrderDetailResponse(BaseModel):
     extra_cost_per_hour: Optional[int] = None
     cost_for_addon_km: Optional[int] = None
     extra_cost_for_addon_km: Optional[int] = None
+    vendor_earns_estimation: Optional[int] = None
 
     # Limited assignment info (no sensitive user data)
     assignments: List[OrderAssignmentDetail] = []
