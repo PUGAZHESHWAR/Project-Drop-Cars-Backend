@@ -80,7 +80,7 @@ class BaseOrderSchema(BaseModel):
     customer_name: str
     customer_number: str
     trip_status: Optional[str]
-    pick_near_city: Optional[str]
+    pick_near_city: Optional[List[str]]
     trip_distance: Optional[int]
     trip_time: Optional[str]
     estimated_price: Optional[int]
@@ -97,6 +97,7 @@ class BaseOrderSchema(BaseModel):
     h_extra_cost_for_addon_km : Optional[int] = None
     venodr_profit: Optional[int]
     admin_profit: Optional[int]
+    night_charges: Optional[int]
 
     class Config:
         orm_mode = True
