@@ -25,11 +25,21 @@ def create_access_token(data: dict, expires_delta: timedelta = None):
     to_encode.update({"exp": expire})
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
-def verify_token(token: str):
+def verify_token(token: str, db: Session):
     """Verify JWT token and return payload"""
+    from app.crud.vehicle_owner import get_vehicle_owner_credentails_by_id
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         user_id: str = payload.get("sub")
+        token_version = payload.get("token_version")
+        print(token_version)
+        vehcile_owner_verify = get_vehicle_owner_credentails_by_id(db, user_id)
+        if token_version != vehcile_owner_verify.token_version:
+            raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Force Logout Action Raised",
+            headers={"WWW-Authenticate": "Bearer"},
+            )
         if user_id is None:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
@@ -117,9 +127,9 @@ def get_current_vendor(credentials: HTTPAuthorizationCredentials = Depends(secur
             headers={"WWW-Authenticate": "Bearer"},
         )
     return vendor
-def get_current_vehicleOwner_id(credentials: HTTPAuthorizationCredentials = Depends(security)) -> str:
+def get_current_vehicleOwner_id(credentials: HTTPAuthorizationCredentials = Depends(security),  db: Session = Depends(get_db)) -> str:
     token = credentials.credentials
-    payload = verify_token(token)
+    payload = verify_token(token,db)
     return payload.get("sub")  # This should be the vehicle_owner_id
 
 def get_current_driver(credentials: HTTPAuthorizationCredentials = Depends(security), db: Session = Depends(get_db)):
