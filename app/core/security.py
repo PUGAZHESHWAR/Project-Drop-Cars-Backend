@@ -54,6 +54,25 @@ def verify_token(token: str, db: Session):
             headers={"WWW-Authenticate": "Bearer"},
         )
         
+def verify_token_admin(token: str):
+    """Verify JWT token and return payload"""
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        user_id: str = payload.get("sub")
+        if user_id is None:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Could not validate credentials",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        return payload
+    except JWTError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Could not validate credentials",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
 def verify_toke_driver(token: str,db: Session):
     from app.crud.car_driver import get_driver_by_id
     """Verify JWT token and return payload"""
@@ -199,7 +218,7 @@ def get_current_admin(credentials: HTTPAuthorizationCredentials = Depends(securi
     from app.crud.admin import get_admin_by_id
     
     token = credentials.credentials
-    payload = verify_token(token)
+    payload = verify_token_admin(token)
     admin_id = payload.get("sub")
     
     if admin_id is None:
