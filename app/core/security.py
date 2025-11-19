@@ -53,6 +53,35 @@ def verify_token(token: str, db: Session):
             detail="Could not validate credentials",
             headers={"WWW-Authenticate": "Bearer"},
         )
+        
+def verify_toke_driver(token: str,db: Session):
+    from app.crud.car_driver import get_driver_by_id
+    """Verify JWT token and return payload"""
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        user_id: str = payload.get("sub")
+        token_version = payload.get("token_version")
+        print(token_version)
+        driver_cred = get_driver_by_id(db, user_id)
+        if token_version != driver_cred.token_version:
+            raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Force Logout Action Raised",
+            headers={"WWW-Authenticate": "Bearer"},
+            )
+        if user_id is None:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Could not validate credentials",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        return payload
+    except JWTError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Could not validate credentials",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
     
 def get_current_user_sub(credentials: HTTPAuthorizationCredentials = Depends(security)):
     try:
@@ -138,7 +167,7 @@ def get_current_driver(credentials: HTTPAuthorizationCredentials = Depends(secur
     from app.crud.car_driver import get_driver_by_id
     
     token = credentials.credentials
-    payload = verify_token(token)
+    payload = verify_toke_driver(token,db)
     driver_id = payload.get("sub")
     
     if driver_id is None:
