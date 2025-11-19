@@ -98,6 +98,7 @@ class BaseOrderSchema(BaseModel):
     venodr_profit: Optional[int]
     admin_profit: Optional[int]
     night_charges: Optional[int]
+    vendor_earns_estimation: Optional[int]
 
     class Config:
         orm_mode = True

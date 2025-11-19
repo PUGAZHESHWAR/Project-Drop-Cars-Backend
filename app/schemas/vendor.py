@@ -192,15 +192,15 @@ class VendorDetailsResponse(BaseModel):
     id: UUID
     full_name: str
     primary_number: str
-    secondary_number: str
+    secondary_number: Optional[str]
     gpay_number: str
     wallet_balance: float
     bank_balance: float
     aadhar_number: str
     aadhar_front_img: Optional[str]
-    address: str
-    city: str
-    pincode: str
+    address: Optional[str]
+    city: Optional[str]
+    pincode: Optional[str]
     account_status: str
     aadhar_status: Optional[str]
     created_at: datetime

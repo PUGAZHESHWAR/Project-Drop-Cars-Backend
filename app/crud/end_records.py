@@ -207,13 +207,13 @@ async def update_end_trip_record(
         cal_admin_profit = math.ceil(cal_vendor_profit * (commision_amount/100))
 
 
-        order.closed_vendor_price = cal_vendor_price
-        order.closed_driver_price = cal_driver_price
+        order.closed_vendor_price = cal_vendor_price + int(updated_toll_charges) if updated_toll_charges and int(updated_toll_charges) > 0 else 0
+        order.closed_driver_price = cal_driver_price + int(updated_toll_charges) if updated_toll_charges and int(updated_toll_charges) > 0 else 0
         vendor_profit = cal_vendor_profit - cal_admin_profit
         admin_profit = cal_admin_profit
         order.vendor_profit = vendor_profit
         order.admin_profit = cal_admin_profit
-        order.driver_profit = cal_vendor_price - cal_vendor_profit
+        order.driver_profit = cal_vendor_price - cal_vendor_profit + int(updated_toll_charges) if updated_toll_charges and int(updated_toll_charges) > 0 else 0
         order.commision_amount = commision_amount
     else:
 

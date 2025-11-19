@@ -69,7 +69,7 @@ def credit_vendor_wallet(
         
         # Then debit admin_profit from vendor
         final_after = after - admin_profit
-        set_vendor_wallet_balance(db, vendor_id, final_after)
+        # set_vendor_wallet_balance(db, vendor_id, final_after)
         
         # Create ledger entry for credit of full amount
         credit_entry = append_vendor_ledger_entry(
@@ -84,16 +84,16 @@ def credit_vendor_wallet(
         )
         
         # Create ledger entry for admin profit debit
-        debit_entry = append_vendor_ledger_entry(
-            db,
-            vendor_id=vendor_id,
-            order_id=order_id,
-            entry_type=VendorLedgerEntryType.DEBIT,
-            amount=admin_profit,
-            balance_before=after,
-            balance_after=final_after,
-            notes=f"Admin profit deduction for order {order_id}",
-        )
+        # debit_entry = append_vendor_ledger_entry(
+        #     db,
+        #     vendor_id=vendor_id,
+        #     order_id=order_id,
+        #     entry_type=VendorLedgerEntryType.DEBIT,
+        #     amount=admin_profit,
+        #     balance_before=after,
+        #     balance_after=final_after,
+        #     notes=f"Admin profit deduction for order {order_id}",
+        # )
         
         # Credit admin wallet with admin profit
         if admin_id:

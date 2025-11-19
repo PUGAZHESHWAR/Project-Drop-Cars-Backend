@@ -85,16 +85,57 @@ def _sum_multisegment_distance_and_duration(index_map: Dict[str, str]) -> (float
     if len(keys) < 2:
         return 0.0, "0 min"
     total_km_sum = 0.0
-    duration_parts: List[str] = []
+    total_minutes = 0
     for i in range(len(keys) - 1):
         origin = index_map[keys[i]]
         destination = index_map[keys[i + 1]]
         segment_km, segment_duration = get_distance_km_between_locations(origin, destination)
         total_km_sum += float(segment_km)
-        duration_parts.append(segment_duration)
-    # Join durations; this is indicative for users and avoids complex parsing
-    duration_text = " + ".join(duration_parts)
-    return round(total_km_sum), duration_text
+        
+        # Parse duration string to minutes and sum
+        duration_minutes = _parse_duration_to_minutes(segment_duration)
+        total_minutes += duration_minutes
+    
+    # Convert total minutes back to readable format
+    total_duration = _format_minutes_to_duration(total_minutes)
+    return round(total_km_sum), total_duration
+
+def _parse_duration_to_minutes(duration_str: str) -> int:
+    """Convert duration string like '1 hour 30 min' or '45 min' to total minutes"""
+    try:
+        if 'hour' in duration_str and 'min' in duration_str:
+            # Format: "X hour Y min"
+            parts = duration_str.split()
+            hours = int(parts[0])
+            minutes = int(parts[2])
+            return hours * 60 + minutes
+        elif 'hour' in duration_str:
+            # Format: "X hour"
+            hours = int(duration_str.split()[0])
+            return hours * 60
+        elif 'min' in duration_str:
+            # Format: "X min"
+            minutes = int(duration_str.split()[0])
+            return minutes
+        else:
+            return 0
+    except (ValueError, IndexError):
+        return 0
+
+def _format_minutes_to_duration(total_minutes: int) -> str:
+    """Convert total minutes to readable format like '2 hours 15 min'"""
+    if total_minutes == 0:
+        return "0 min"
+    
+    hours = total_minutes // 60
+    minutes = total_minutes % 60
+    
+    if hours > 0 and minutes > 0:
+        return f"{hours} hour{'s' if hours > 1 else ''} {minutes} min"
+    elif hours > 0:
+        return f"{hours} hour{'s' if hours > 1 else ''}"
+    else:
+        return f"{minutes} min"
 
 
 def calculate_multisegment_fare(pickup_drop_location: Dict[str, str], cost_per_km: int, driver_allowance: int, extra_driver_allowance: int, permit_charges: int, extra_permit_charges: int, hill_charges: int, toll_charges: int, extra_cost_per_km:int, night_charges:int, trip_type:str) -> Dict[str, Any]:
