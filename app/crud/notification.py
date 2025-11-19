@@ -7,6 +7,8 @@ from app.models.vehicle_owner_details import VehicleOwnerDetails
 from app.models.car_details import CarDetails
 from app.models.car_driver import CarDriver
 from app.models.order_assignments import OrderAssignment
+from typing import List
+from sqlalchemy import text
 
 EXPO_PUSH_URL = "https://exp.host/--/api/v2/push/send"
 
@@ -51,11 +53,19 @@ def update_permissions_only(db: Session, sub: str, data: NotificationPermissionU
     db.refresh(notification)
     return notification
 
-def get_users_with_permission1(db: Session):
-    return db.query(Notification).filter(Notification.permission1 == True,Notification.user == "vehicle_owner").all()
-
-async def send_push_notifications_vehicle_owner(db: Session, title: str, message: str):
-    users = get_users_with_permission1(db)
+def get_users_with_permission1(db: Session, city_list: List[str]):
+    if not city_list:
+        return []
+        
+    return db.query(Notification).filter(
+        Notification.permission1 == True,
+        Notification.user == "vehicle_owner",
+        text("notifications.selected_city && :cities")
+    ).params(cities=city_list).all()
+    
+async def send_push_notifications_vehicle_owner(db: Session, title: str, message: str,ordered_city : list):
+    users = get_users_with_permission1(db,ordered_city)
+    print("hellow world",end='\n')
     tokens = [user.token for user in users if user.token]
     print(tokens)
 

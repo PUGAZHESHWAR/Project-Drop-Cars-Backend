@@ -45,7 +45,7 @@ def create_master_from_new_order(db: Session, new_order: NewOrder, max_time_to_a
     db.commit()
     db.refresh(master)
     asyncio.ensure_future(
-        send_push_notifications_vehicle_owner(db, f"New Order Alert ({new_order.trip_type.value})", f"A new order has been Received (ID: {master.id})")
+        send_push_notifications_vehicle_owner(db, f"New Order Alert ({new_order.trip_type.value})", f"A new order has been Received (ID: {master.id})",ordered_city = new_order.pick_near_city)
     )
     return master
 
