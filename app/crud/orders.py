@@ -12,6 +12,7 @@ from app.models.order_assignments import OrderAssignment,AssignmentStatusEnum
 from sqlalchemy.sql import or_, and_
 from app.crud.notification import send_push_notifications_vehicle_owner
 import asyncio
+import math
 
 vendor_commession_env = os.getenv("VENDOR_COMMESSION_ENV")
 admin_commession_env = int(os.getenv("ADMIN_COMMESSION_ENV"))
@@ -147,6 +148,7 @@ def map_to_combined_schema(order, new_order=None, hourly_rental=None):
         "commision_amount": order.commision_amount,
         "created_at": order.created_at,
         "max_time": max_time,
+        "vendor_earns_estimation" : math.ceil(((new_order.extra_cost_per_km*order.trip_distance) + new_order.extra_driver_allowance + new_order.extra_permit_charges)+((new_order.cost_per_km*new_order.trip_distance)*order.vendor_fees_percent/100)) - math.ceil(math.ceil(((new_order.extra_cost_per_km*order.trip_distance) + new_order.extra_driver_allowance + new_order.extra_permit_charges)+((new_order.cost_per_km*new_order.trip_distance)*order.vendor_fees_percent/100))*order.platform_fees_percent/100) if order.source == "NEW_ORDERS" else 0,
         "cancelled_by" : order.cancelled_by,
         "h_cost_for_addon_km": hourly_rental.cost_for_addon_km if hourly_rental else None,
         "h_extra_cost_for_addon_km": hourly_rental.extra_cost_for_addon_km if hourly_rental else None,

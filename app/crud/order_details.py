@@ -313,7 +313,7 @@ def get_vendor_order_details(db: Session, order_id: int, vendor_id: str) -> Opti
             cost_for_addon_km = hourly_order.cost_for_addon_km
             extra_cost_for_addon_km = hourly_order.extra_cost_for_addon_km
             pickup_notes = hourly_order.pickup_notes
-    
+    print("Check venodrs fare test")
     return VendorOrderDetailResponse(
         id=order.id,
         source=order.source.value,
@@ -349,6 +349,7 @@ def get_vendor_order_details(db: Session, order_id: int, vendor_id: str) -> Opti
         extra_permit_charges=extra_permit_charges,
         hill_charges=hill_charges,
         toll_charges=toll_charges,
+        updated_toll_charges = int(order.updated_toll_charges) if order.updated_toll_charges and int( order.updated_toll_charges) > 0 else 0,
         night_charges=int(order.night_charges) if order.night_charges and int(order.night_charges) > 0 else 0,
         waiting_time = order.waiting_time if order.waiting_time else 0,
         vendor_earns_estimation =  math.ceil(((new_order.extra_cost_per_km*order.trip_distance) + new_order.extra_driver_allowance + new_order.extra_permit_charges)+((new_order.cost_per_km*new_order.trip_distance)*order.vendor_fees_percent/100)) - math.ceil(math.ceil(((new_order.extra_cost_per_km*order.trip_distance) + new_order.extra_driver_allowance + new_order.extra_permit_charges)+((new_order.cost_per_km*new_order.trip_distance)*order.vendor_fees_percent/100))*order.platform_fees_percent/100) if order.source == "NEW_ORDERS" else 0,

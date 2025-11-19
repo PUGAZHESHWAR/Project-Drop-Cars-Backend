@@ -172,6 +172,7 @@ class VendorOrderDetailResponse(BaseModel):
     max_time: Optional[int] = None
     toll_charge_update: Optional[bool] = None
     data_visibility_vehicle_owner: Optional[bool] = None
+    updated_toll_charges: Optional[int] = None
 
     # Source-specific details for NEW_ORDERS
     cost_per_km: Optional[int] = None
