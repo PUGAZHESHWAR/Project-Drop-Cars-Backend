@@ -12,6 +12,7 @@ from fastapi import HTTPException
 from app.crud.vendor_wallet import credit_vendor_wallet
 from app.crud.notification import notify_vendor_auto_cancelled_order
 from app.models.vendor_details import VendorDetails
+import math
 
 
 def create_order_assignment(
@@ -125,7 +126,9 @@ async def cancel_timed_out_pending_assignments(db: Session) -> int:
                 # Debit penalty amount from vehicle owner's wallet
                 try:
                     if order.source == "NEW_ORDERS":
-                        penalty_amount = penalty_amount + round(((dneworder.cost_per_km*dneworder.trip_distance)*order.platform_fees_percent)/100)
+                        penalty_amount = (dneworder.extra_cost_per_km*dneworder.trip_distance) + dneworder.extra_driver_allowance + dneworder.extra_permit_charges
+                        penalty_amount = penalty_amount + math.ceil(((dneworder.cost_per_km*dneworder.trip_distance)*order.vendor_fees_percent)/100)
+                        penalty_amount = penalty_amount - math.ceil(penalty_amount*dneworder.platform_fees_percent/100)
                     new_balance, ledger_entry = debit_wallet(
                     db=db,
                     vehicle_owner_id=vehicle_owner_id,
@@ -435,7 +438,7 @@ def get_driver_assigned_orders(db: Session, driver_id: str) -> List[dict]:
                 "estimated_price": order.estimated_price,
                 "toll_charge_update": order.toll_charge_update,
                 "data_visibility_vehicle_owner": order.data_visibility_vehicle_owner,
-                "closed_vendor_price": order.vendor_price,
+                "closed_vendor_price": order.closed_vendor_price,
                 "night_charges": order.night_charges,
                 "waiting_time": order.waiting_time,
                 "assigned_at": assignment.assigned_at,
