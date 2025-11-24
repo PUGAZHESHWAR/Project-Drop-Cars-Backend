@@ -56,7 +56,7 @@ async def load_cities_startup() -> None:
 
 
 @app.on_event("startup")
-@repeat_every(seconds=60, wait_first=True)  # every 3 minutes
+@repeat_every(seconds=10, wait_first=True)  # every 3 minutes
 async def cancel_expired_assignments_task() -> None:
     """Background job: cancel pending assignments that exceeded their max assignment time."""
     db = SessionLocal()

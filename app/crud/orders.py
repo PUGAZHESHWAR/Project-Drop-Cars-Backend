@@ -76,7 +76,7 @@ def create_master_from_hourly(db: Session, hourly: HourlyRental, *, pick_near_ci
     db.commit()
     db.refresh(master)
     asyncio.ensure_future(
-        send_push_notifications_vehicle_owner(db, "Hourly Rental Alert (Hourly Rental)", f"A new order has been Received (ID: {master.id}) is created.")
+        send_push_notifications_vehicle_owner(db, "Hourly Rental Alert (Hourly Rental)", f"A new order has been Received (ID: {master.id}) is created.",ordered_city = pick_near_city)
     )
     return master
 

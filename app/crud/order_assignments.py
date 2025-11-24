@@ -129,6 +129,9 @@ async def cancel_timed_out_pending_assignments(db: Session) -> int:
                         penalty_amount = (dneworder.extra_cost_per_km*dneworder.trip_distance) + dneworder.extra_driver_allowance + dneworder.extra_permit_charges
                         penalty_amount = penalty_amount + math.ceil(((dneworder.cost_per_km*dneworder.trip_distance)*order.vendor_fees_percent)/100)
                         penalty_amount = penalty_amount - math.ceil(penalty_amount*dneworder.platform_fees_percent/100)
+                    else:
+                        penalty_amount = (order.vendor_price - order.estimated_price)
+                        penalty_amount = penalty_amount - math.ceil(penalty_amount*order.platform_fees_percent/100)
                     new_balance, ledger_entry = debit_wallet(
                     db=db,
                     vehicle_owner_id=vehicle_owner_id,
