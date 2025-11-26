@@ -27,9 +27,106 @@ def create_access_token(data: dict, expires_delta: timedelta = None):
 
 def verify_token(token: str):
     """Verify JWT token and return payload"""
+    from app.crud.vehicle_owner import get_vehicle_owner_credentails_by_id
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         user_id: str = payload.get("sub")
+        if user_id is None:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Could not validate credentials",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        return payload
+    except JWTError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Could not validate credentials",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+        
+def verify_token_vehicle_owner_end(token: str, db: Session):
+    """Verify JWT token and return payload"""
+    from app.crud.vehicle_owner import get_vehicle_owner_credentails_by_id
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        user_id: str = payload.get("sub")
+        token_version = payload.get("token_version")
+        print(token_version)
+        vehcile_owner_verify = get_vehicle_owner_credentails_by_id(db, user_id)
+        if token_version != vehcile_owner_verify.token_version:
+            raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Force Logout Action Raised",
+            headers={"WWW-Authenticate": "Bearer"},
+            )
+        if user_id is None:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Could not validate credentials",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        return payload
+    except JWTError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Could not validate credentials",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+        
+def verify_token_vendor_endpoint(token: str):
+    """Verify JWT token and return payload"""
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        user_id: str = payload.get("sub")
+        if user_id is None:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Could not validate credentials",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        return payload
+    except JWTError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Could not validate credentials",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+        
+def verify_token_admin(token: str):
+    """Verify JWT token and return payload"""
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        user_id: str = payload.get("sub")
+        if user_id is None:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Could not validate credentials",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        return payload
+    except JWTError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Could not validate credentials",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+def verify_toke_driver(token: str,db: Session):
+    from app.crud.car_driver import get_driver_by_id
+    """Verify JWT token and return payload"""
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        user_id: str = payload.get("sub")
+        token_version = payload.get("token_version")
+        print(token_version)
+        driver_cred = get_driver_by_id(db, user_id)
+        if token_version != driver_cred.token_version:
+            raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Force Logout Action Raised",
+            headers={"WWW-Authenticate": "Bearer"},
+            )
         if user_id is None:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
@@ -90,7 +187,7 @@ def get_current_vendor(credentials: HTTPAuthorizationCredentials = Depends(secur
     from app.crud.vendor import get_vendor_by_id
     
     token = credentials.credentials
-    payload = verify_token(token)
+    payload = verify_token_vendor_endpoint(token)
     vendor_id = payload.get("sub")
     token_version = payload.get("token_version")
     # print("Check token version",token_version)
@@ -117,9 +214,9 @@ def get_current_vendor(credentials: HTTPAuthorizationCredentials = Depends(secur
             headers={"WWW-Authenticate": "Bearer"},
         )
     return vendor
-def get_current_vehicleOwner_id(credentials: HTTPAuthorizationCredentials = Depends(security)) -> str:
+def get_current_vehicleOwner_id(credentials: HTTPAuthorizationCredentials = Depends(security),  db: Session = Depends(get_db)) -> str:
     token = credentials.credentials
-    payload = verify_token(token)
+    payload = verify_token_vehicle_owner_end(token,db)
     return payload.get("sub")  # This should be the vehicle_owner_id
 
 def get_current_driver(credentials: HTTPAuthorizationCredentials = Depends(security), db: Session = Depends(get_db)):
@@ -128,7 +225,7 @@ def get_current_driver(credentials: HTTPAuthorizationCredentials = Depends(secur
     from app.crud.car_driver import get_driver_by_id
     
     token = credentials.credentials
-    payload = verify_token(token)
+    payload = verify_toke_driver(token,db)
     driver_id = payload.get("sub")
     
     if driver_id is None:
@@ -160,7 +257,7 @@ def get_current_admin(credentials: HTTPAuthorizationCredentials = Depends(securi
     from app.crud.admin import get_admin_by_id
     
     token = credentials.credentials
-    payload = verify_token(token)
+    payload = verify_token_admin(token)
     admin_id = payload.get("sub")
     
     if admin_id is None:

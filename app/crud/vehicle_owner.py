@@ -184,3 +184,8 @@ def get_vehicle_owner_by_id(db: Session, vehicle_owner_id: UUID):
     return db.query(VehicleOwnerDetails).filter(
         VehicleOwnerDetails.vehicle_owner_id == vehicle_owner_id
     ).first()
+    
+def get_vehicle_owner_credentails_by_id(db: Session, vehicle_owner_id: UUID):
+    return db.query(VehicleOwnerCredentials).filter(
+        VehicleOwnerCredentials.id == vehicle_owner_id
+    ).first()

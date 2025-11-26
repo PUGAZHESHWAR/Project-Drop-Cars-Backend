@@ -87,7 +87,7 @@ def login(user: UserLogin, db: Session = Depends(get_db)):
     counts = get_vehicle_owner_counts(db, db_user.id)
     
     # Create access token
-    access_token = create_access_token({"sub": str(db_user.id),"user":"vehicle_owner"})
+    access_token = create_access_token({"sub": str(db_user.id),"user":"vehicle_owner","token_version" : db_user.token_version})
     
     return {
         "access_token": access_token, 
