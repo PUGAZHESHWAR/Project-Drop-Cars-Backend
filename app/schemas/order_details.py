@@ -124,6 +124,7 @@ class AdminOrderDetailResponse(BaseModel):
     estimated_price: Optional[int] = None
     vendor_price: Optional[int] = None
     platform_fees_percent: Optional[int] = None
+    vendor_fees_percent: Optional[int] = None
     closed_vendor_price: Optional[int] = None
     closed_driver_price: Optional[int] = None
     commision_amount: Optional[int] = None

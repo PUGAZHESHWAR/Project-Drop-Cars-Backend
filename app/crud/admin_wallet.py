@@ -13,6 +13,12 @@ def get_admin_balance(db: Session, admin_id: str) -> int:
     ).scalar_one()
     return admin.balance
 
+def get_admin_account_ledger_data(db: Session, admin_id: str):
+    """Get admin's current balance"""
+    print("checking admin id in crud:", admin_id)
+    wallet_data = db.query(AdminWalletLedger).filter(AdminWalletLedger.admin_id == admin_id).all()
+    return wallet_data
+
 
 def set_admin_balance(db: Session, admin_id: str, new_balance: int) -> None:
     """Set admin's balance"""

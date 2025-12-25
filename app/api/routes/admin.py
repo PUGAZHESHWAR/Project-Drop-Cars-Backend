@@ -1,7 +1,7 @@
 # api/routes/admin.py
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form, Query
 from sqlalchemy.orm import Session
-from app.schemas.admin import AdminSignup, AdminSignin, AdminTokenResponse, AdminOut, AdminUpdate
+from app.schemas.admin import AdminSignup, AdminSignin, AdminTokenResponse, AdminOut, AdminUpdate, AdminLedger
 from app.schemas.admin_add_money import VehicleOwnerInfoResponse, SearchVehicleOwnerRequest, AdminAddMoneyRequest, AdminAddMoneyResponse
 from app.crud.admin import create_admin, authenticate_admin, get_admin_by_id, update_admin, get_all_admins
 from app.crud.admin_add_money import get_vehicle_owner_by_primary_number, create_admin_add_money_transaction
@@ -24,6 +24,7 @@ from app.schemas.admin_management import (
 )
 from app.schemas.order_details import AdminOrdersListResponse
 from app.crud.order_details import get_all_admin_orders
+from app.crud.admin_wallet import get_admin_account_ledger_data
 from app.core.security import create_access_token, get_current_admin
 from app.database.session import get_db
 from app.utils.gcs import upload_image_to_gcs, generate_signed_url_from_gcs
@@ -187,6 +188,30 @@ async def get_admin_profile(
     try:
         return current_admin
         
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Internal server error: {str(e)}"
+        )
+
+@router.get("/admin/acccount-ledger", response_model=List[AdminLedger])
+async def get_admin_account_ledger(
+    current_admin = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    """
+    Get current admin profile
+    
+    Returns the profile of the currently authenticated admin.
+    
+    Returns:
+        - Admin profile details
+    """
+    try:
+        return get_admin_account_ledger_data(db, current_admin.id)
+
     except HTTPException:
         raise
     except Exception as e:
