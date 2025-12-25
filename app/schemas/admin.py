@@ -47,6 +47,7 @@ class AdminOut(BaseModel):
     phone: str
     role: str
     organization_id: UUID
+    balance: Optional[int] = 0
     created_at: datetime
 
     class Config:
@@ -64,6 +65,21 @@ class AdminOut(BaseModel):
         }
 
 # --- Admin Token Response Schema ---
+
+class AdminLedger(BaseModel):
+    id: UUID
+    # admin_id: UUID
+    order_id: Optional[int]
+    entry_type: str
+    amount: int
+    balance_before: int
+    balance_after: int
+    notes: Optional[str]
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
 class AdminTokenResponse(BaseModel):
     access_token: str
     token_type: str

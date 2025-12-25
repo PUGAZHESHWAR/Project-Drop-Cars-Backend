@@ -1,7 +1,7 @@
 # api/routes/admin.py
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form, Query
 from sqlalchemy.orm import Session
-from app.schemas.admin import AdminSignup, AdminSignin, AdminTokenResponse, AdminOut, AdminUpdate
+from app.schemas.admin import AdminSignup, AdminSignin, AdminTokenResponse, AdminOut, AdminUpdate, AdminLedger
 from app.schemas.admin_add_money import VehicleOwnerInfoResponse, SearchVehicleOwnerRequest, AdminAddMoneyRequest, AdminAddMoneyResponse
 from app.crud.admin import create_admin, authenticate_admin, get_admin_by_id, update_admin, get_all_admins
 from app.crud.admin_add_money import get_vehicle_owner_by_primary_number, create_admin_add_money_transaction
@@ -24,6 +24,7 @@ from app.schemas.admin_management import (
 )
 from app.schemas.order_details import AdminOrdersListResponse
 from app.crud.order_details import get_all_admin_orders
+from app.crud.admin_wallet import get_admin_account_ledger_data
 from app.core.security import create_access_token, get_current_admin
 from app.database.session import get_db
 from app.utils.gcs import upload_image_to_gcs, generate_signed_url_from_gcs
@@ -187,6 +188,30 @@ async def get_admin_profile(
     try:
         return current_admin
         
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Internal server error: {str(e)}"
+        )
+
+@router.get("/admin/acccount-ledger", response_model=List[AdminLedger])
+async def get_admin_account_ledger(
+    current_admin = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    """
+    Get current admin profile
+    
+    Returns the profile of the currently authenticated admin.
+    
+    Returns:
+        - Admin profile details
+    """
+    try:
+        return get_admin_account_ledger_data(db, current_admin.id)
+
     except HTTPException:
         raise
     except Exception as e:
@@ -1400,7 +1425,6 @@ async def update_account_status_unified(
     account_id: UUID,
     account_type: str = Query(..., description="Account type: vendor, vehicle_owner, driver, or quickdriver"),
     status_param: Optional[str] = Query(None, alias="status", description="New status (can also be sent in body)"),
-    status_param: Optional[str] = Query(None, alias="status", description="New status (can also be sent in body)"),
     status_update: Optional[UpdateAccountStatusRequest] = None,
     current_admin = Depends(get_current_admin),
     db: Session = Depends(get_db)
@@ -1437,8 +1461,6 @@ async def update_account_status_unified(
         # Get status from query parameter or request body
         if status_param:
             new_status = status_param
-        if status_param:
-            new_status = status_param
         elif status_update and status_update.account_status:
             new_status = status_update.account_status
         else:
@@ -1455,24 +1477,17 @@ async def update_account_status_unified(
         )
         
         # Convert id to UUID if it's a string, otherwise use as-is (it might already be a UUID)
-        # Convert id to UUID if it's a string, otherwise use as-is (it might already be a UUID)
         result_id = result["id"]
-        if isinstance(result_id, UUID):
-            # Already a UUID, use it directly
-            pass
-        elif isinstance(result_id, str):
         if isinstance(result_id, UUID):
             # Already a UUID, use it directly
             pass
         elif isinstance(result_id, str):
             result_id = UUID(result_id)
         else:
-        else:
             result_id = UUID(str(result_id))
         
         return StatusUpdateResponse(
             message=result["message"],
-            id=result_id,
             id=result_id,
             new_status=result["new_status"]
         )
