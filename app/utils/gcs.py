@@ -67,7 +67,7 @@ import os
 from fastapi import UploadFile
 import uuid
 
-GCS_BUCKET_NAME = "drop-cars-test-bucket"
+GCS_BUCKET_NAME = os.getenv("CREDENTIALS_BUCKET") 
 GCS_SIGNER_SERVICE_ACCOUNT = os.getenv("GCS_SIGNER_SERVICE_ACCOUNT")  # should be gcs-access-sa@drop-cars-473714.iam.gserviceaccount.com
 
 # Get default credentials (Cloud Run service account or local user)
