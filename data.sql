@@ -10,5 +10,5 @@ DROP TABLE IF EXISTS "drop-cars"."razorpay_transactions" CASCADE;
 DROP TABLE IF EXISTS "drop-cars"."transfer_transactions" CASCADE;
 DROP TABLE IF EXISTS "drop-cars"."vendor_wallet_ledger" CASCADE;
 DROP TABLE IF EXISTS "drop-cars"."wallet_ledger" CASCADE;
--- DROP TABLE IF EXISTS "drop-cars"."vendor_details" CASCADE;
--- DROP TABLE IF EXISTS "drop-cars"."vendor" CASCADE;
+DROP TABLE IF EXISTS "drop-cars"."vendor_details" CASCADE;
+DROP TABLE IF EXISTS "drop-cars"."vendor" CASCADE;
