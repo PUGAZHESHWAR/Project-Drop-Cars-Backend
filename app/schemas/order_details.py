@@ -251,6 +251,7 @@ class VehicleOwnerOrderDetailResponse(BaseModel):
     toll_charge: Optional[int] = None
     waiting_charge: Optional[int] = None
     night_charges: Optional[int] = None
+    charges_to_deduct : Optional[int] = None
 
     # Assignment information for this vehicle owner
     assignment_id: int

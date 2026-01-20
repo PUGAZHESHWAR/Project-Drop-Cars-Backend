@@ -529,12 +529,20 @@ def get_vehicle_owner_orders_by_assignment_status(
                 permit_charge_val = new_order.permit_charges
                 hills_charge_val = new_order.hill_charges
                 toll_charge_val = new_order.toll_charges
+                charges_to_deduct = (
+                    round(
+                        (order.vendor_price - order.estimated_price)
+                        + ((new_order.cost_per_km * new_order.trip_distance) * 10 / 100)
+                    )
+                    if new_order else 0
+                )
                 # Get waiting charge from order.waiting_time (stored when trip ends)
                 waiting_charge_val = order.waiting_time if order.waiting_time is not None else None
         elif order.source == "HOURLY_RENTAL":
             hourly_rental = db.query(HourlyRental).filter(HourlyRental.id == order.source_order_id).first()
             if hourly_rental:
                 pickup_notes = hourly_rental.pickup_notes
+                charges_to_deduct = int(order.vendor_price - order.estimated_price) if hourly_rental else 0
                 # If you want to map waiting charge for hourly rental, consider extra_cost_per_hour
                 waiting_charge_val = hourly_rental.extra_cost_per_hour
 
@@ -563,6 +571,7 @@ def get_vehicle_owner_orders_by_assignment_status(
             created_at=order.created_at,
             max_time_to_assign_order=order.max_time_to_assign_order,
             pickup_notes = pickup_notes,
+            charges_to_deduct = charges_to_deduct,
 
             # Pricing additions
             price_per_km=price_per_km,
@@ -655,6 +664,7 @@ def get_vehicle_owner_non_pending_orders(db: Session, vehicle_owner_id: str) -> 
         try:
             if order.source.value == "NEW_ORDERS":
                 # Get waiting charge from order.waiting_time (stored when trip ends)
+                new_order = db.query(NewOrder).filter(NewOrder.order_id == order.source_order_id).first()  
                 waiting_charge_val = order.waiting_time if order.waiting_time is not None else None
             elif order.source.value == "HOURLY_RENTAL":
                 hourly = db.query(HourlyRental).filter(HourlyRental.id == order.source_order_id).first()
@@ -690,6 +700,14 @@ def get_vehicle_owner_non_pending_orders(db: Session, vehicle_owner_id: str) -> 
             # Pricing additions
             waiting_charge=waiting_charge_val,
             night_charges=order.night_charges,
+            
+            #new order specific
+            pickup_notes = new_order.pickup_notes if order.source.value == "NEW_ORDERS" else None,
+            price_per_km = new_order.cost_per_km if order.source.value == "NEW_ORDERS" else None,
+            driver_allowance = new_order.driver_allowance if order.source.value == "NEW_ORDERS" else None,
+            permit_charge = new_order.permit_charges if order.source.value == "NEW_ORDERS" else None,
+            hills_charge = new_order.hill_charges if order.source.value == "NEW_ORDERS" else None,
+            toll_charge = new_order.toll_charges if order.source.value == "NEW_ORDERS" else None,
             
             # Assignment information
             assignment_id=assignment.id,

@@ -65,6 +65,9 @@ async def cancel_timed_out_pending_assignments(db: Session) -> int:
     """
     from app.models.orders import CancelledByEnum
     from app.crud.wallet import debit_wallet, get_owner_balance
+    from app.models.admin import Admin
+    admin = db.query(Admin).first()
+    admin_id = str(admin.id) if admin else None
     
     now = datetime.utcnow()
     # Find pending assignments whose order's max_time_to_assign_order has passed
@@ -128,10 +131,10 @@ async def cancel_timed_out_pending_assignments(db: Session) -> int:
                     if order.source == "NEW_ORDERS":
                         penalty_amount = (dneworder.extra_cost_per_km*dneworder.trip_distance) + dneworder.extra_driver_allowance + dneworder.extra_permit_charges
                         penalty_amount = penalty_amount + math.ceil(((dneworder.cost_per_km*dneworder.trip_distance)*order.vendor_fees_percent)/100)
-                        penalty_amount = penalty_amount - math.ceil(penalty_amount*dneworder.platform_fees_percent/100)
+                        # penalty_amount = penalty_amount - math.ceil(penalty_amount*dneworder.platform_fees_percent/100)
                     else:
                         penalty_amount = (order.vendor_price - order.estimated_price)
-                        penalty_amount = penalty_amount - math.ceil(penalty_amount*order.platform_fees_percent/100)
+                        # penalty_amount = penalty_amount - math.ceil(penalty_amount*order.platform_fees_percent/100)
                     new_balance, ledger_entry = debit_wallet(
                     db=db,
                     vehicle_owner_id=vehicle_owner_id,
@@ -141,19 +144,30 @@ async def cancel_timed_out_pending_assignments(db: Session) -> int:
                     notes=f"Auto-cancellation penalty for order {order.id}"
                     )
                     print(f"Debited {penalty_amount} from vehicle owner {vehicle_owner_id} for auto-cancellation")
+                    admin_credit_amount = 0
+                    if order.source == "NEW_ORDERS":
+                        admin_credit_amount = math.ceil(penalty_amount*dneworder.platform_fees_percent/100)
+                        penalty_amount = penalty_amount - admin_credit_amount
+                    else:
+                        admin_credit_amount = math.ceil(penalty_amount*order.platform_fees_percent/100)
+                        penalty_amount = penalty_amount - admin_credit_amount
+                    
                     await notify_vendor_auto_cancelled_order(
                         db=db,
                         vendor_id = order.vendor_id,
                         order_id = assignment.order_id,
                         penalty_amount = penalty_amount
-                                                       )
+                        )
                     
                     after , entry = credit_vendor_wallet(
                         db = db,
                         vendor_id=order.vendor_id,
                         amount=penalty_amount,
                         order_id=assignment.order_id,
-                        notes=f"Auto-cancellation penalty for order {order.id}"
+                        notes=f"Auto-cancellation penalty for order {order.id}",
+                        deduct_admin_profit=True,
+                        admin_profit= admin_credit_amount if admin_credit_amount else None,
+                        admin_id=admin_id
                         )
                     
                     
@@ -194,13 +208,57 @@ def get_order_assignment_by_id(db: Session, assignment_id: int) -> Optional[Orde
     return db.query(OrderAssignment).filter(OrderAssignment.id == assignment_id).first()
 
 
-def get_order_assignments_by_vehicle_owner_id(db: Session, vehicle_owner_id: str) -> List[OrderAssignment]:
-    """Get all order assignments for a specific vehicle owner"""
-    # print(f"Vehicle owner ID: {vehicle_owner_id}")
-    return db.query(OrderAssignment).filter(
+def get_order_assignments_by_vehicle_owner_id(db: Session, vehicle_owner_id: str):
+
+    response = []
+
+    order_assignments = db.query(OrderAssignment).filter(
         OrderAssignment.vehicle_owner_id == vehicle_owner_id,
-        OrderAssignment.assignment_status.in_([AssignmentStatusEnum.ASSIGNED, AssignmentStatusEnum.PENDING])
+        OrderAssignment.assignment_status.in_([
+            AssignmentStatusEnum.ASSIGNED,
+            AssignmentStatusEnum.PENDING
+        ])
     ).order_by(desc(OrderAssignment.created_at)).all()
+
+    for assignment in order_assignments:
+        order = db.query(Order).filter(Order.id == assignment.order_id).first()
+
+        charges_to_deduct = 0
+        if order:
+            if order.source == OrderSourceEnum.NEW_ORDERS:
+                new_order = db.query(NewOrder).filter(
+                    NewOrder.order_id == order.source_order_id
+                ).first()
+
+                charges_to_deduct = (
+                    round(
+                        (order.vendor_price - order.estimated_price)
+                        + ((new_order.cost_per_km * new_order.trip_distance) * 10 / 100)
+                    )
+                    if new_order else 0
+                )
+
+            elif order.source == OrderSourceEnum.HOURLY_RENTAL:
+                charges_to_deduct = int(order.vendor_price - order.estimated_price)
+
+        response.append({
+            "id" : assignment.id,
+            "order_id": assignment.order_id,
+            "vehicle_owner_id": assignment.vehicle_owner_id,
+            "driver_id": assignment.driver_id,
+            "car_id": assignment.car_id,
+            "assignment_status": assignment.assignment_status,
+            "assigned_at": assignment.assigned_at,
+            "expires_at": assignment.expires_at,
+            "cancelled_at": assignment.cancelled_at,
+            "completed_at": assignment.completed_at,
+            "created_at": assignment.created_at,
+            "charges_to_deduct": charges_to_deduct
+        })
+
+    return response
+
+    
 
 
 def get_order_assignments_by_order_id(db: Session, order_id: int) -> List[OrderAssignment]:

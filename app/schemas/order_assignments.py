@@ -22,6 +22,7 @@ class OrderAssignmentResponse(BaseModel):
     cancelled_at: Optional[datetime] = None
     completed_at: Optional[datetime] = None
     created_at: datetime
+    charges_to_deduct: Optional[int] = None
 
     class Config:
         from_attributes = True

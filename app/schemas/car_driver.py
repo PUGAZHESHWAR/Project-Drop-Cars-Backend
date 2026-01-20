@@ -47,8 +47,8 @@ class CarDriverForm(BaseModel):
     )]
     
     address: Annotated[str, Field(
-        min_length=10,
-        description="Address must be at least 10 characters long"
+        min_length=2,
+        description="Address must be at least 2 characters long"
     )]
     city: Annotated[str, Field(
         min_length=2,
