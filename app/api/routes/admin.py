@@ -1,9 +1,9 @@
 # api/routes/admin.py
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form, Query
 from sqlalchemy.orm import Session
-from app.schemas.admin import AdminSignup, AdminSignin, AdminTokenResponse, AdminOut, AdminUpdate, AdminLedger
+from app.schemas.admin import AdminSignup,UserInfoResponse, SearchUserRequest,AdminSignin, AdminTokenResponse, AdminOut, AdminUpdate, AdminLedger, UserPasswordUpdate, UserPasswordUpdateResponse
 from app.schemas.admin_add_money import VehicleOwnerInfoResponse, SearchVehicleOwnerRequest, AdminAddMoneyRequest, AdminAddMoneyResponse
-from app.crud.admin import create_admin, authenticate_admin, get_admin_by_id, update_admin, get_all_admins
+from app.crud.admin import get_user_by_primary_number,create_admin, authenticate_admin, get_admin_by_id, update_admin, get_all_admins, reset_password_by_id
 from app.crud.admin_add_money import get_vehicle_owner_by_primary_number, create_admin_add_money_transaction
 from app.crud.admin_management import (
     get_all_vendors, get_vendor_full_details, update_vendor_account_status, update_vendor_document_status,
@@ -637,6 +637,36 @@ async def search_vehicle_owner(
             detail=f"Internal server error: {str(e)}"
         )
 
+@router.post("/admin/search-user/details",response_model=UserInfoResponse, status_code=status.HTTP_200_OK)
+async def search_user(
+    search_request: SearchUserRequest,
+    current_admin = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    """
+    Search User by Primary Number
+    
+    Searches for a user by their primary phone number.
+    Returns user information including profile details.
+    
+    Requires admin authentication.
+    
+    Returns:
+        - User information
+        - Profile details
+    """
+    try:
+        print(search_request.role,search_request.primary_number)
+        user_info = get_user_by_primary_number(db, search_request.role, search_request.primary_number)
+        return UserInfoResponse(**user_info)
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Internal server error: {str(e)}"
+        )
 
 @router.post("/admin/add-money-to-vehicle-owner", response_model=AdminAddMoneyResponse, status_code=status.HTTP_201_CREATED)
 async def add_money_to_vehicle_owner(
@@ -1499,3 +1529,35 @@ async def update_account_status_unified(
             detail=f"Internal server error: {str(e)}"
         )
 
+
+
+@router.post("/admin/search-user/reset-password",response_model=UserPasswordUpdateResponse, status_code=status.HTTP_200_OK)
+async def search_user(
+    search_request: UserPasswordUpdate,
+    current_admin = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    """
+    Search User by Primary Number
+    
+    Searches for a user by their primary phone number.
+    Returns user information including profile details.
+    
+    Requires admin authentication.
+    
+    Returns:
+        - User information
+        - Profile details
+    """
+    try:
+        print(search_request.role,search_request.id)
+        user_info = reset_password_by_id(db, search_request.role, search_request.id, search_request.password)
+        return UserPasswordUpdateResponse(**user_info)
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Internal server error: {str(e)}"
+        )
