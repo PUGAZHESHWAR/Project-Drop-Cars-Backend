@@ -3,6 +3,8 @@ from sqlalchemy.orm import Session
 from fastapi import HTTPException, status
 from app.models.admin import Admin
 from typing import Optional
+from app.core.security import get_password_hash, verify_password
+# from app.models.vehicle_owner import VehicleOwner
 import uuid
 
 def get_admin_by_id(db: Session, admin_id: str):
@@ -110,4 +112,181 @@ def delete_admin(db: Session, admin_id: str):
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to delete admin: {str(e)}"
+        )
+
+def get_user_by_primary_number(db: Session, role: str, primary_number: str):
+    """Get user by primary number and role"""
+    if role == "VehicleOwner":
+        from app.models.vehicle_owner import VehicleOwnerCredentials
+        from app.models.vehicle_owner_details import VehicleOwnerDetails
+        data = db.query(VehicleOwnerCredentials).filter(
+            VehicleOwnerCredentials.primary_number == primary_number
+        ).first()
+        user_details = db.query(VehicleOwnerDetails).filter(
+            VehicleOwnerDetails.vehicle_owner_id == data.id
+        ).first()
+        return {
+            "id": data.id,
+            "full_name": user_details.full_name,
+            "role" : "Driver",
+            "account_status": data.account_status.value,
+            "primary_number": data.primary_number,
+            "created_at": data.created_at
+        }
+    elif role == "Driver":
+        from app.models.car_driver import CarDriver
+        data = db.query(CarDriver).filter(
+            CarDriver.primary_number == primary_number
+        ).first()
+        return {
+            "id": data.id,
+            "full_name": data.full_name,
+            "role" : "Quick Driver",
+            "account_status": data.driver_status.value,
+            "primary_number": data.primary_number,
+            "created_at": data.created_at
+        }
+        
+    elif role == "Vendor":
+        from app.models.vendor import VendorCredentials
+        from app.models.vendor_details import VendorDetails
+        data =  db.query(VendorCredentials).filter(
+            VendorCredentials.primary_number == primary_number
+        ).first()
+        user_details = db.query(VendorDetails).filter(
+            VendorDetails.vendor_id == data.id
+        ).first()
+        return {
+            "id": data.id,
+            "full_name": user_details.full_name,
+            "role" : "Vendor",
+            "account_status": data.account_status.value,
+            "primary_number": data.primary_number,
+            "created_at": data.created_at
+        }
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid role specified"
+        )
+        
+        
+        
+# def reset_password_by_id(db: Session, role: str, id: str, password : str):
+#     """Get user by primary number and role"""
+#     if role == "Driver":
+#         from app.models.vehicle_owner import VehicleOwnerCredentials
+#         from app.models.vehicle_owner_details import VehicleOwnerDetails
+#         data = db.query(VehicleOwnerCredentials).filter(
+#             VehicleOwnerCredentials.primary_number == id
+#         ).first()
+#         user_details = db.query(VehicleOwnerDetails).filter(
+#             VehicleOwnerDetails.vehicle_owner_id == data.id
+#         ).first()
+#         return {
+#             "id": data.id,
+#             "full_name": user_details.full_name,
+#             "role" : "Driver",
+#             "account_status": data.account_status.value,
+#             "primary_number": data.primary_number,
+#             "created_at": data.created_at
+#         }
+#     elif role == "Quick Driver":
+#         from app.models.car_driver import CarDriver
+#         data = db.query(CarDriver).filter(
+#             CarDriver.id == id
+#         ).first()
+#         return {
+#             "id": data.id,
+#             "full_name": data.full_name,
+#             "role" : "Quick Driver",
+#             "account_status": data.driver_status.value,
+#             "primary_number": data.primary_number,
+#             "created_at": data.created_at
+#         }
+        
+#     elif role == "Vendor":
+#         from app.models.vendor import VendorCredentials
+#         data =  db.query(VendorCredentials).filter(
+#             VendorCredentials.id == id
+#         ).first()
+#         return {
+#             "id": data.id,
+#             "full_name": user_details.full_name,
+#             "role" : "Vendor",
+#             "account_status": data.account_status.value,
+#             "primary_number": data.primary_number,
+#             "created_at": data.created_at
+#         }
+#     else:
+#         raise HTTPException(
+#             status_code=status.HTTP_400_BAD_REQUEST,
+#             detail="Invalid role specified"
+#         )
+
+
+def reset_password_by_id(db: Session, role: str, id: str, password: str):
+    hashed_password = get_password_hash(password)
+
+    if role == "Driver":
+        from app.models.vehicle_owner import VehicleOwnerCredentials
+
+        user = db.query(VehicleOwnerCredentials).filter(
+            VehicleOwnerCredentials.id == id
+        ).first()
+
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Driver not found"
+            )
+
+        user.hashed_password = hashed_password
+        db.commit()
+        db.refresh(user)
+
+        return {"message": "Password reset successfully", "role": "Driver"}
+
+    elif role == "Quick Driver":
+        from app.models.car_driver import CarDriver
+
+        user = db.query(CarDriver).filter(
+            CarDriver.id == id
+        ).first()
+
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Quick Driver not found"
+            )
+
+        user.hashed_password = hashed_password
+        db.commit()
+        db.refresh(user)
+
+        return {"message": "Password reset successfully", "role": "Quick Driver"}
+
+    elif role == "Vendor":
+        from app.models.vendor import VendorCredentials
+
+        user = db.query(VendorCredentials).filter(
+            VendorCredentials.id == id
+        ).first()
+
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Vendor not found"
+            )
+
+        user.hashed_password = hashed_password
+        db.commit()
+        db.refresh(user)
+
+        return {"message": "Password reset successfully", "role": "Vendor"}
+
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid role specified"
         )

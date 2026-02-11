@@ -129,3 +129,28 @@ class AdminUpdate(BaseModel):
             if not re.match(email_pattern, v):
                 raise ValueError('Invalid email format')
         return v
+
+class SearchUserRequest(BaseModel):
+    role: str = Field(..., description="Search query for user role")
+    primary_number: str = Field(None, description="Search query for phone number")
+    
+class UserInfoResponse(BaseModel):
+    id: UUID
+    full_name: str
+    role: str
+    account_status: str
+    primary_number: str
+    created_at: datetime
+    
+    class Config:
+        orm_mode = True   # Pydantic v1
+        # model_config = ConfigDict(from_attributes=True)  # Pydantic v2
+        
+class UserPasswordUpdate(BaseModel):
+    role: str = None
+    id: str = None
+    password: str
+    
+class UserPasswordUpdateResponse(BaseModel):
+    role: str
+    message : str
