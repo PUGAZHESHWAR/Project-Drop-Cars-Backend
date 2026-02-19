@@ -10,7 +10,7 @@ from app.models.new_orders import NewOrder, OrderTypeEnum
 from app.models.hourly_rental import HourlyRental
 from app.models.order_assignments import OrderAssignment,AssignmentStatusEnum
 from sqlalchemy.sql import or_, and_
-from app.crud.notification import send_push_notifications_vehicle_owner
+from app.crud.notification import send_push_notifications_vehicle_owner, send_custom_sound_notification_vehicle_owner
 import asyncio
 import math
 
@@ -41,11 +41,21 @@ def create_master_from_new_order(db: Session, new_order: NewOrder, max_time_to_a
         night_charges=night_charges,
         vendor_fees_percent = vendor_commession_env
     )
+    print(new_order.pickup_drop_location)
     db.add(master)
     db.commit()
     db.refresh(master)
+    locations = new_order.pickup_drop_location
+
+    values = list(locations.values())
+
+    first_location = values[0]
+    last_location = values[-1]
+
+    print(first_location)
+    print(last_location)
     asyncio.ensure_future(
-        send_push_notifications_vehicle_owner(db, f"New Order Alert ({new_order.trip_type.value})", f"A new order has been Received (ID: {master.id})",ordered_city = new_order.pick_near_city)
+        send_custom_sound_notification_vehicle_owner(db, f"New Booking - {new_order.trip_type.value} (ID: {master.id})", f"{new_order.pickup_drop_location["0"]} -> {new_order.pickup_drop_location[str(len(new_order.pickup_drop_location)-1)]}",ordered_city = new_order.pick_near_city)
     )
     return master
 
@@ -76,7 +86,7 @@ def create_master_from_hourly(db: Session, hourly: HourlyRental, *, pick_near_ci
     db.commit()
     db.refresh(master)
     asyncio.ensure_future(
-        send_push_notifications_vehicle_owner(db, "Hourly Rental Alert (Hourly Rental)", f"A new order has been Received (ID: {master.id}) is created.",ordered_city = pick_near_city)
+        send_custom_sound_notification_vehicle_owner(db, f"New Booking - Hourly Rental (ID: {master.id})", f"{hourly.pickup_drop_location["0"]}",ordered_city = pick_near_city)
     )
     return master
 
