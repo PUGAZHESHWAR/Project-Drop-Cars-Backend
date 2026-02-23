@@ -111,9 +111,19 @@ async def accept_order(
         if not order:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="Order not found"
+                detail="Booking not found"
+            )
+        if order.cancelled_by == "CANCELLED_BY_VENDOR":
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Cannot accept an Booking that has been cancelled by vendor"
             )
         
+        if order.cancelled_by == "AUTO_CANCELLED":
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Cannot accept an Booking that has been already accepted by someone"
+            )
         # Determine required hold amount (use estimated price or minimum)
         hold_amount = int(order.vendor_price - order.estimated_price + 100 )or 100  # Minimum 1 INR in paise
         
