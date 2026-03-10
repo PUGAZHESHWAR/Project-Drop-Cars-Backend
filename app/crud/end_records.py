@@ -102,7 +102,7 @@ async def update_end_trip_record(
     # Ensure difference km is greater than original planned km (when available)
     if order := db.query(Order).filter(Order.id == order_id).first():
         # For all trip types, enforce updated km > old km when order.trip_distance exists
-        if order.trip_distance is not None and total_km <= int(order.trip_distance):
+        if order.trip_distance is not None and total_km <= (int(order.trip_distance) - 20):
             raise ValueError("Updated total KM must be greater than the original trip distance")
     
     if order.trip_status == "CANCELLED":
@@ -114,7 +114,7 @@ async def update_end_trip_record(
     
     if order.toll_charge_update == True:
         # print("Toll charge update already applied, cannot update again",order.toll_charge_update)
-        if updated_toll_charges is  None or not(updated_toll_charges > 10):
+        if updated_toll_charges is  None or not(updated_toll_charges >= 0):
             raise ValueError("You Must Enter the Toll charges for this order")
     
     # Calculate fare based on order pricing

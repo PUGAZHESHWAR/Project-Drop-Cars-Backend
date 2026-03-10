@@ -13,3 +13,4 @@ __pycache__/
 *.json
 venv
 cloud_push.sh
+backup.dump

@@ -6,8 +6,8 @@
 
 
 
-# GCS_CREDENTIALS = "app/core/drop-cars-468718-d08441443ada.json"
-# GCS_BUCKET_NAME = "drop-cars-test-bucket"
+# GCS_CREDENTIALS = "app/core/drop-cars2-23860624c9e6.json"
+# GCS_BUCKET_NAME = "drop-cars-production-bucket"
 
 # client = storage.Client.from_service_account_json(GCS_CREDENTIALS)
 # # client = storage.Client()

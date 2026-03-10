@@ -103,6 +103,50 @@ async def send_push_notifications_vehicle_owner(db: Session, title: str, message
         "expo_response": response.json()
     }
     
+    
+async def send_custom_sound_notification_vehicle_owner(
+    db: Session,
+    title: str,
+    message: str,
+    ordered_city: list
+):
+    if ordered_city == ["ALL"]:
+        ordered_city = get_cities()
+
+    users = get_users_with_permission1(db, ordered_city)
+
+    tokens = [user.token for user in users if user.token]
+
+    if not tokens:
+        return {"status": "No tokens found for users with permission1 = True"}
+
+    payloads = [
+        {
+            "to": token,
+            "title": title,
+            "body": message,
+            "sound": "notification_tone.wav",
+            "priority": "high",
+            "channelId": "dropcars-custom-sound-v2",
+            "data": {"test": True},
+            "android": {
+                "channelId": "dropcars-custom-sound-v2",
+                "sound": "notification_tone.wav",
+                "priority": "max"
+            }
+        }
+        for token in tokens
+    ]
+
+    async with httpx.AsyncClient() as client:
+        response = await client.post(EXPO_PUSH_URL, json=payloads)
+
+    return {
+        "status": "Custom sound notifications sent",
+        "tokens": tokens,
+        "expo_response": response.json()
+    }
+
 def get_users_vendor_permission_2(db: Session, user_id: str):
     return db.query(Notification).filter(
         Notification.permission2 == True,
