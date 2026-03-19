@@ -413,7 +413,7 @@ def update_driver_document_status(db: Session, driver_id: str, document_status: 
 def get_all_accounts_unified(
     db: Session, 
     skip: int = 0, 
-    limit: int = 100,
+    limit: int = 3000,
     account_type: Optional[str] = None,
     status_filter: Optional[str] = None
 ) -> Tuple[List[dict], int, int, int]:

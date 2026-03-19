@@ -409,7 +409,7 @@ async def list_all_cars(
 @router.get("/admin/accounts", response_model=AccountListResponse)
 async def list_all_accounts(
     skip: int = Query(0, ge=0, description="Number of records to skip"),
-    limit: int = Query(100, ge=1, le=1000, description="Number of records to return"),
+    limit: int = Query(3000, ge=1, le=3000, description="Number of records to return"),
     account_type: Optional[str] = Query(None, description="Filter by account type: vendor, vehicle_owner, driver, quickdriver"),
     status_filter: Optional[str] = Query(None, description="Filter by status: active, inactive, pending, ONLINE, OFFLINE, etc."),
     current_admin = Depends(get_current_admin),

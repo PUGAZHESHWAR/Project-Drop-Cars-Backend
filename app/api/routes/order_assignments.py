@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form
 from sqlalchemy.orm import Session
 from typing import List,Union
-from app.crud.notification import send_push_notification_to_vendor, send_push_notification_to_vendor_driver
+from app.crud.notification import send_booking_accepted_to_telegram, send_booking_cancelled_to_telegram, send_push_notification_to_vendor, send_push_notification_to_vendor_driver
 from app.database.session import get_db
 from app.core.security import get_current_user, get_current_vehicleOwner_id, get_current_driver, get_current_vendor
 from app.schemas.order_assignments import (
@@ -143,7 +143,7 @@ async def accept_order(
         db.commit()
         print("Order is Accepted",assignment.order_id)
         await send_push_notification_to_vendor(db, assignment.order_id, "Order Accepted", f"ORDER ID : {assignment.order_id} is Accepted by",str(assignment.vehicle_owner_id))
-
+        await send_booking_accepted_to_telegram(master_id = assignment.order_id)
         return assignment
     
     except Exception as e:
@@ -271,7 +271,6 @@ async def cancel_assignment_endpoint(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Failed to cancel assignment"
         )
-    
     return cancelled_assignment
 
 
@@ -518,6 +517,7 @@ async def cancel_order_by_vendor_endpoint(
     try:
         vendor_id = str(current_vendor.id)
         result = cancel_order_by_vendor(db, order_id, vendor_id)
+        await send_booking_cancelled_to_telegram(master_id = order_id)
         return result
     except ValueError as e:
         raise HTTPException(

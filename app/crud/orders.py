@@ -10,7 +10,7 @@ from app.models.new_orders import NewOrder, OrderTypeEnum
 from app.models.hourly_rental import HourlyRental
 from app.models.order_assignments import OrderAssignment,AssignmentStatusEnum
 from sqlalchemy.sql import or_, and_
-from app.crud.notification import send_push_notifications_vehicle_owner, send_custom_sound_notification_vehicle_owner
+from app.crud.notification import send_push_notifications_vehicle_owner, send_custom_sound_notification_vehicle_owner, send_trip_to_telegram_hourly, send_trip_to_telegram
 import asyncio
 import math
 
@@ -47,14 +47,26 @@ def create_master_from_new_order(db: Session, new_order: NewOrder, max_time_to_a
     db.commit()
     db.refresh(master)
     locations = new_order.pickup_drop_location
-
     values = list(locations.values())
+    route = " -> ".join(values)
+    # first_location = values[0]
+    # last_location = values[-1]
 
-    first_location = values[0]
-    last_location = values[-1]
-
-    print(first_location)
-    print(last_location)
+    # print(first_location)
+    # print(last_location)
+    dt = datetime.fromisoformat(str(new_order.start_date_time))
+    formatted = dt.strftime("%d %b %Y %I:%M %p")
+    asyncio.ensure_future(
+        send_trip_to_telegram(
+            pickup_location=new_order.pickup_drop_location['0'],
+            drop_location=new_order.pickup_drop_location[str(len(new_order.pickup_drop_location)-1)],
+            trip_type=new_order.trip_type.value,
+            vehicle_type=new_order.car_type.value,
+            pickup_datetime=formatted,
+            master_id = master.id,
+            route = route
+        )
+    )
     asyncio.ensure_future(
         send_custom_sound_notification_vehicle_owner(db, f"New Booking - {new_order.trip_type.value} (ID: {master.id})", f"{new_order.pickup_drop_location['0']} -> {new_order.pickup_drop_location[str(len(new_order.pickup_drop_location)-1)]}",ordered_city = new_order.pick_near_city)
     )
@@ -86,6 +98,17 @@ def create_master_from_hourly(db: Session, hourly: HourlyRental, *, pick_near_ci
     db.add(master)
     db.commit()
     db.refresh(master)
+    dt = datetime.fromisoformat(str(hourly.start_date_time))
+    formatted = dt.strftime("%d %b %Y %I:%M %p")
+    asyncio.ensure_future(
+        send_trip_to_telegram_hourly(
+            pickup_location=hourly.pickup_drop_location['0'],
+            trip_type=hourly.trip_type.value,
+            vehicle_type=hourly.car_type.value,
+            pickup_datetime=formatted,
+            master_id = master.id
+        )
+    )
     asyncio.ensure_future(
         send_custom_sound_notification_vehicle_owner(db, f"New Booking - Hourly Rental (ID: {master.id})", f"{hourly.pickup_drop_location['0']}",ordered_city = pick_near_city)
     )

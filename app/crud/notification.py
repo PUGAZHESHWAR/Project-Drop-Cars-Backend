@@ -10,8 +10,13 @@ from app.models.order_assignments import OrderAssignment
 from typing import List
 from sqlalchemy import text
 from app.utils.cities import get_cities
+import os
+from dotenv import load_dotenv
+load_dotenv()
 
 EXPO_PUSH_URL = "https://exp.host/--/api/v2/push/send"
+BOT_TOKEN = os.getenv("BOT_TOKEN")
+CHAT_ID = os.getenv("CHAT_ID")
 
 def get_notification(db: Session, sub: str):
     print("The Sube us ",sub[0])
@@ -419,4 +424,179 @@ async def notify_vendor_auto_cancelled_order(
         "status": "Auto-cancel notification sent",
         "tokens": tokens,
         "expo_response": response.json()
+    }
+
+
+async def send_trip_to_telegram(
+    pickup_location: str,
+    drop_location: str,
+    trip_type: str,
+    vehicle_type: str,
+    pickup_datetime: str,
+    master_id : int,
+    route : str
+):
+    print("Notification CRUD module loaded successfully")
+    print(f"BOT_TOKEN: {BOT_TOKEN}, CHAT_ID: {CHAT_ID}")
+
+    message = f"""
+🚖 🚖 <b>DROP CARS</b> 🚖 🚖
+
+<b>Booking ID :</b> {master_id}
+
+<b>From :</b> {pickup_location}
+<b>To :</b> {drop_location}
+
+<b>Route : </b> 
+{route}
+
+<b>Trip Type :</b> {trip_type}
+<b>Vehicle :</b> {vehicle_type}
+
+<b>Pickup Time :</b> {pickup_datetime}
+
+⚠ <b>Booking ONLY using the Drop Cars Driver App</b>
+
+<b>Driver App :</b>
+https://play.google.com/store/apps/details?id=com.dropcars.driverapp
+
+<b>Follow Drop Cars - Driver Partners on Telegram :</b>
+https://t.me/drop_cars
+
+<b>Follow Drop Cars - Driver Partners on WhatsApp :</b>
+https://whatsapp.com/channel/0029VbB6Wj04tRrza58IwZ2p
+    """
+
+    url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
+
+    payload = {
+            "chat_id": CHAT_ID,
+            "text": message,
+            "parse_mode": "HTML"
+        }
+
+    async with httpx.AsyncClient() as client:
+        response = await client.post(url, json=payload)
+        print("Telegram notification sent, response:", response.json())
+        return {
+            "status": "Telegram message sent",
+            "telegram_response": response.json()
+        }
+
+
+async def send_trip_to_telegram_hourly(
+    pickup_location: str,
+    trip_type: str,
+    vehicle_type: str,
+    pickup_datetime: str,
+    master_id : int
+    
+):
+
+    message = f"""
+🚖 🚖 <b>DROP CARS</b> 🚖 🚖
+
+<b>Booking ID :</b> {master_id}
+
+<b>From :</b> {pickup_location}
+
+<b>Trip Type :</b> {trip_type}
+<b>Vehicle :</b> {vehicle_type}
+
+<b>Pickup Time :</b> {pickup_datetime}
+
+⚠ <b>Booking ONLY using the Drop Cars Driver App</b>
+
+<b>Driver App :</b>
+https://play.google.com/store/apps/details?id=com.dropcars.driverapp
+
+<b>Follow Drop Cars - Driver Partners on Telegram :</b>
+https://t.me/drop_cars
+
+<b>Follow Drop Cars - Driver Partners on WhatsApp :</b>
+https://whatsapp.com/channel/0029VbB6Wj04tRrza58IwZ2p
+"""
+
+    url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
+
+    payload = {
+        "chat_id": CHAT_ID,
+        "text": message,
+        "parse_mode": "HTML"
+    }
+
+    async with httpx.AsyncClient() as client:
+        response = await client.post(url, json=payload)
+
+    return {
+        "status": "Telegram message sent",
+        "telegram_response": response.json()
+    }
+    
+async def send_booking_accepted_to_telegram(master_id: int):
+    message = f"""
+✅ ✅ <b>BOOKING ACCEPTED</b> ✅ ✅
+
+<b>Booking ID :</b> {master_id}
+
+🚖 <b>This booking has been successfully accepted by a Driver.</b>
+
+📲 <b>Please check the Driver App for Upcomming  Bookings.</b>
+
+<b>Driver App :</b>
+https://play.google.com/store/apps/details?id=com.dropcars.driverapp
+
+📢 <b>Stay Updated :</b>
+Telegram: https://t.me/drop_cars
+WhatsApp: https://whatsapp.com/channel/0029VbB6Wj04tRrza58IwZ2p
+"""
+
+    url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
+
+    payload = {
+        "chat_id": CHAT_ID,
+        "text": message,
+        "parse_mode": "HTML"
+    }
+
+    async with httpx.AsyncClient() as client:
+        response = await client.post(url, json=payload)
+
+    return {
+        "status": "Booking accepted message sent",
+        "telegram_response": response.json()
+    }
+    
+async def send_booking_cancelled_to_telegram(master_id: int):
+    message = f"""
+❌ ❌ <b>BOOKING CANCELLED</b> ❌ ❌
+
+<b>Booking ID :</b> {master_id}
+
+🚫 <b>This booking has been cancelled.</b>
+
+📲 <b>Please check the Driver App for Upcomming  Bookings.</b>
+
+<b>Driver App :</b>
+https://play.google.com/store/apps/details?id=com.dropcars.driverapp
+
+📢 <b>Stay Updated :</b>
+Telegram: https://t.me/drop_cars
+WhatsApp: https://whatsapp.com/channel/0029VbB6Wj04tRrza58IwZ2p
+"""
+
+    url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
+
+    payload = {
+        "chat_id": CHAT_ID,
+        "text": message,
+        "parse_mode": "HTML"
+    }
+
+    async with httpx.AsyncClient() as client:
+        response = await client.post(url, json=payload)
+
+    return {
+        "status": "Booking cancelled message sent",
+        "telegram_response": response.json()
     }
