@@ -329,6 +329,7 @@ def get_vendor_order_details(db: Session, order_id: int, vendor_id: str) -> Opti
     assigned_car_name = None
     assigned_car_number = None
     vehicle_owner_name = None
+    vehicle_owner_number = None
     
     if assignments:
         latest_assignment = assignments[-1]  # Most recent assignment
@@ -351,6 +352,7 @@ def get_vendor_order_details(db: Session, order_id: int, vendor_id: str) -> Opti
             ).first()
             if owner_details:
                 vehicle_owner_name = owner_details.full_name
+                vehicle_owner_number = owner_details.primary_number
     
     # Get source-specific details
     cost_per_km = None
@@ -444,7 +446,8 @@ def get_vendor_order_details(db: Session, order_id: int, vendor_id: str) -> Opti
         assigned_car_number=assigned_car_number,
         vehicle_owner_name=vehicle_owner_name,
         vendor_profit=order.vendor_profit,
-        admin_profit=order.admin_profit
+        admin_profit=order.admin_profit,
+        vehicle_owner_number=vehicle_owner_number
     )
 
 

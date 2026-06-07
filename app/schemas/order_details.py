@@ -208,6 +208,7 @@ class VendorOrderDetailResponse(BaseModel):
     vehicle_owner_name: Optional[str] = None
     vendor_profit: Optional[int] = None
     admin_profit: Optional[int] = None
+    vehicle_owner_number: Optional[str] = None
     
     
 
